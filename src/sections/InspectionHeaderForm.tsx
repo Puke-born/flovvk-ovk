@@ -109,16 +109,32 @@ export function InspectionHeaderForm({ inspection }: Props) {
         <h2 className="text-lg font-semibold">Fastighet & uppdrag</h2>
         <span className="text-xs text-muted-foreground">Auto-sparas</span>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
         <Field
           label="Fastighetsbeteckning *"
           value={form.propertyDesignation}
           onChange={(e) => set("propertyDesignation", e.target.value)}
-          containerClassName="sm:col-span-2 lg:col-span-1"
+          containerClassName="col-span-2 sm:col-span-4"
         />
-        <Field label="Byggår" value={form.buildingYear} onChange={(e) => set("buildingYear", e.target.value)} />
-        <Field label="Ombyggnadsår" value={form.renovationYear} onChange={(e) => set("renovationYear", e.target.value)} />
-        <div className="flex flex-col gap-1.5">
+        <Field
+          label="Bygg.ID"
+          value={form.buildingId}
+          onChange={(e) => set("buildingId", e.target.value)}
+          containerClassName="col-span-2 sm:col-span-2"
+        />
+        <Field
+          label="Byggår"
+          value={form.buildingYear}
+          onChange={(e) => set("buildingYear", e.target.value)}
+          containerClassName="col-span-1 sm:col-span-1"
+        />
+        <Field
+          label="Ombyggnadsår"
+          value={form.renovationYear}
+          onChange={(e) => set("renovationYear", e.target.value)}
+          containerClassName="col-span-1 sm:col-span-1"
+        />
+        <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-4">
           <div className="flex items-center justify-between">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
               Byggnorm
@@ -183,15 +199,24 @@ export function InspectionHeaderForm({ inspection }: Props) {
             </Select>
           )}
         </div>
-        <Field label="Bygg.ID" value={form.buildingId} onChange={(e) => set("buildingId", e.target.value)} />
         <Field
           label="Adress"
           value={form.address}
           onChange={(e) => set("address", e.target.value)}
-          containerClassName="sm:col-span-2"
+          containerClassName="col-span-2 sm:col-span-4"
         />
-        <Field label="Postnr" value={form.postalCode} onChange={(e) => set("postalCode", e.target.value)} />
-        <Field label="Ort" value={form.city} onChange={(e) => set("city", e.target.value)} />
+        <Field
+          label="Postnr"
+          value={form.postalCode}
+          onChange={(e) => set("postalCode", e.target.value)}
+          containerClassName="col-span-1 sm:col-span-1"
+        />
+        <Field
+          label="Ort"
+          value={form.city}
+          onChange={(e) => set("city", e.target.value)}
+          containerClassName="col-span-1 sm:col-span-1"
+        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t">
