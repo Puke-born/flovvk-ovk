@@ -124,12 +124,11 @@ export default function InspectionPage() {
 
         <Tabs value={tab} onValueChange={setTab} className="mt-6">
           <TabsList className="h-12 w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
+            <TabsTrigger value="intyg" className="text-base h-10">
+              Intyg
+            </TabsTrigger>
             <TabsTrigger value="aggregate" className="text-base h-10">
               Aggregat
-            </TabsTrigger>
-            <TabsTrigger value="intyg" className="text-base h-10">
-              <FileDown className="h-4 w-4 mr-2" />
-              Intyg
             </TabsTrigger>
           </TabsList>
           <TabsContent value="aggregate" className="mt-4">
