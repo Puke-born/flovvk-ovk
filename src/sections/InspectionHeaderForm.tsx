@@ -28,6 +28,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
   const [form, setForm] = useState({
     propertyDesignation: inspection.propertyDesignation ?? "",
     buildingYear: inspection.buildingYear ?? "",
+    renovationYear: inspection.renovationYear ?? "",
     address: inspection.address ?? "",
     postalCode: inspection.postalCode ?? "",
     city: inspection.city ?? "",
@@ -40,6 +41,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
     setForm({
       propertyDesignation: inspection.propertyDesignation ?? "",
       buildingYear: inspection.buildingYear ?? "",
+      renovationYear: inspection.renovationYear ?? "",
       address: inspection.address ?? "",
       postalCode: inspection.postalCode ?? "",
       city: inspection.city ?? "",
@@ -79,6 +81,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
           containerClassName="sm:col-span-2 lg:col-span-1"
         />
         <Field label="Byggår" value={form.buildingYear} onChange={(e) => set("buildingYear", e.target.value)} />
+        <Field label="Ombyggnadsår" value={form.renovationYear} onChange={(e) => set("renovationYear", e.target.value)} />
         <Field label="Bygg.ID" value={form.buildingId} onChange={(e) => set("buildingId", e.target.value)} />
         <Field
           label="Adress"

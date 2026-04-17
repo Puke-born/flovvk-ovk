@@ -78,6 +78,7 @@ export function IntygView({ inspection }: Props) {
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
               <Row k="Fastighetsbeteckning" v={inspection.propertyDesignation} />
               <Row k="Byggår" v={inspection.buildingYear} />
+              <Row k="Ombyggnadsår" v={inspection.renovationYear} />
               <Row
                 k="Adress"
                 v={[inspection.address, inspection.postalCode, inspection.city].filter(Boolean).join(", ")}
