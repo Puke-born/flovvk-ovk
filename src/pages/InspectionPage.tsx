@@ -60,10 +60,54 @@ export default function InspectionPage() {
     </span>
   );
 
+  const handleExport = async (kind: "intyg" | "protokoll") => {
+    if (!inspection.propertyDesignation) {
+      toast.error("Fyll i fastighetsbeteckning först");
+      return;
+    }
+    const units = await db.units.where("inspectionId").equals(inspection.id).sortBy("order");
+    if (kind === "protokoll" && units.length === 0) {
+      toast.error("Lägg till minst ett aggregat");
+      return;
+    }
+    const propertyOwner = inspection.propertyOwnerId
+      ? await db.propertyOwners.get(inspection.propertyOwnerId)
+      : undefined;
+    const operationsManager = inspection.operationsManagerId
+      ? await db.operationsManagers.get(inspection.operationsManagerId)
+      : undefined;
+    const inspector = inspection.inspectorId
+      ? await db.inspectors.get(inspection.inspectorId)
+      : undefined;
+    const ctx = { inspection, units, propertyOwner, operationsManager, inspector };
+    if (kind === "intyg") exportIntygPdf(ctx);
+    else exportProtokollPdf(ctx);
+  };
+
   const right = (
-    <div className="hidden sm:flex items-center gap-2 mr-2">
+    <div className="flex items-center gap-1 sm:gap-2 mr-1">
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-10 px-2 sm:px-3"
+        onClick={() => handleExport("intyg")}
+        title="Exportera Intyg (PDF)"
+      >
+        <FileDown className="h-4 w-4 sm:mr-1.5" />
+        <span className="hidden sm:inline">Intyg</span>
+      </Button>
+      <Button
+        size="sm"
+        variant="ghost"
+        className="h-10 px-2 sm:px-3"
+        onClick={() => handleExport("protokoll")}
+        title="Exportera Protokoll (PDF)"
+      >
+        <FileDown className="h-4 w-4 sm:mr-1.5" />
+        <span className="hidden sm:inline">Protokoll</span>
+      </Button>
       <span
-        className={`inline-flex items-center gap-1 text-xs transition-opacity ${
+        className={`hidden md:inline-flex items-center gap-1 text-xs ml-1 transition-opacity ${
           savedFlash ? "opacity-100 text-success" : "opacity-50 text-muted-foreground"
         }`}
       >
