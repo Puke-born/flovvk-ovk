@@ -1,11 +1,7 @@
 import { useLiveQuery } from "dexie-react-hooks";
-import { FileDown } from "lucide-react";
 import { db, type Inspection } from "@/lib/db";
 import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { exportIntygPdf, exportProtokollPdf } from "@/lib/pdf";
-import { toast } from "sonner";
 
 interface Props {
   inspection: Inspection;
@@ -30,39 +26,8 @@ export function IntygView({ inspection }: Props) {
     [inspection.inspectorId],
   );
 
-  const ctx = { inspection, units: units ?? [], propertyOwner: owner, operationsManager: ops, inspector };
-
-  const handleIntyg = () => {
-    if (!inspection.propertyDesignation) {
-      toast.error("Fyll i fastighetsbeteckning först");
-      return;
-    }
-    exportIntygPdf(ctx);
-  };
-  const handleProtokoll = () => {
-    if (!inspection.propertyDesignation) {
-      toast.error("Fyll i fastighetsbeteckning först");
-      return;
-    }
-    if ((units ?? []).length === 0) {
-      toast.error("Lägg till minst ett aggregat");
-      return;
-    }
-    exportProtokollPdf(ctx);
-  };
-
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row gap-2">
-        <Button onClick={handleIntyg} size="lg" className="touch-button h-14 flex-1">
-          <FileDown className="h-5 w-5 mr-2" />
-          Exportera Intyg (PDF)
-        </Button>
-        <Button onClick={handleProtokoll} size="lg" variant="outline" className="touch-button h-14 flex-1">
-          <FileDown className="h-5 w-5 mr-2" />
-          Exportera Protokoll (PDF)
-        </Button>
-      </div>
 
       <Card className="overflow-hidden">
         <div className="bg-primary text-primary-foreground px-4 sm:px-6 py-4">
