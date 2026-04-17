@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, updateInspection, uid, type Contact, type Inspection } from "@/lib/db";
+import { db, updateInspection, assignInspector, uid, type Contact, type Inspection } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/Field";
 import { ContactPicker } from "@/components/ContactPicker";
 import { ContactDialog } from "@/components/ContactDialog";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface Props {
   inspection: Inspection;
@@ -14,6 +23,7 @@ interface Props {
 export function InspectionHeaderForm({ inspection }: Props) {
   const owners = useLiveQuery(() => db.propertyOwners.toArray(), [], []);
   const ops = useLiveQuery(() => db.operationsManagers.toArray(), [], []);
+  const inspectors = useLiveQuery(() => db.inspectors.toArray(), [], []);
 
   const [form, setForm] = useState({
     propertyDesignation: inspection.propertyDesignation ?? "",
@@ -102,6 +112,86 @@ export function InspectionHeaderForm({ inspection }: Props) {
           />
           {selectedOps && <ContactPreview c={selectedOps} />}
         </div>
+      </div>
+
+      <div className="mt-4 pt-4 border-t space-y-2">
+        <div className="flex items-center justify-between">
+          <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Besiktningsman
+          </Label>
+          <Link to="/settings" className="text-xs text-primary hover:underline">
+            Hantera besiktningsmän
+          </Link>
+        </div>
+        {(inspectors ?? []).length === 0 ? (
+          <div className="rounded-md border border-dashed p-3 text-sm text-muted-foreground">
+            Inga besiktningsmän upplagda.{" "}
+            <Link to="/settings" className="text-primary hover:underline">
+              Lägg till en
+            </Link>
+            .
+          </div>
+        ) : (
+          <Select
+            value={inspection.inspectorId ?? "__none__"}
+            onValueChange={(v) => {
+              if (v === "__none__") {
+                updateInspection(inspection.id, {
+                  inspectorId: undefined,
+                  inspectorName: undefined,
+                  inspectorAuthorization: undefined,
+                  inspectorCertificationNumber: undefined,
+                  inspectorSignature: undefined,
+                  inspectorPhone: undefined,
+                  inspectorEmail: undefined,
+                  inspectorCompany: undefined,
+                  inspectorAddress: undefined,
+                  inspectorPostalCode: undefined,
+                  inspectorCity: undefined,
+                });
+              } else {
+                assignInspector(inspection.id, v);
+              }
+            }}
+          >
+            <SelectTrigger className="h-12 text-base">
+              <SelectValue placeholder="Välj besiktningsman…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="__none__">
+                <span className="text-muted-foreground">— ingen vald —</span>
+              </SelectItem>
+              {(inspectors ?? []).map((i) => (
+                <SelectItem key={i.id} value={i.id} className="text-base py-3">
+                  {i.name}
+                  {i.certificationNumber ? ` · ${i.certificationNumber}` : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        )}
+        {inspection.inspectorName && (
+          <div className="rounded-md bg-muted/50 p-3 text-sm space-y-1">
+            <div className="font-medium">{inspection.inspectorName}</div>
+            <div className="text-muted-foreground">
+              {[
+                inspection.inspectorAuthorization,
+                inspection.inspectorCertificationNumber &&
+                  `Cert.nr ${inspection.inspectorCertificationNumber}`,
+                inspection.inspectorCompany,
+              ]
+                .filter(Boolean)
+                .join(" · ")}
+            </div>
+            {inspection.inspectorSignature && (
+              <img
+                src={inspection.inspectorSignature}
+                alt="Signatur"
+                className="h-12 mt-1 object-contain"
+              />
+            )}
+          </div>
+        )}
       </div>
 
       <ContactDialog
