@@ -22,7 +22,10 @@ import { toast } from "sonner";
 export default function Home() {
   const navigate = useNavigate();
   const inspections = useLiveQuery(
-    () => db.inspections.where("archived").notEqual(1 as any).reverse().sortBy("updatedAt"),
+    async () => {
+      const all = await db.inspections.orderBy("updatedAt").reverse().toArray();
+      return all.filter((i) => !i.archived);
+    },
     [],
     [],
   );
