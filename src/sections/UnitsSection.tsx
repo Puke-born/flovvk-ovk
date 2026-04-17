@@ -279,7 +279,7 @@ function UnitEditor({
         <Field label="Luftmängd" value={form.airflow ?? ""} onChange={(e) => set("airflow", e.target.value)} />
         
         {(form.customTechFields ?? []).map((cf, idx) => (
-          <div key={cf.id} className="space-y-1.5">
+          <div key={cf.id} className="flex flex-col gap-1.5">
             <div className="flex items-center gap-1">
               <Input
                 value={cf.label}
@@ -289,24 +289,25 @@ function UnitEditor({
                   next[idx] = { ...next[idx], label: e.target.value };
                   set("customTechFields", next);
                 }}
-                className="h-8 text-xs font-medium"
+                className="h-6 px-1 py-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-transparent bg-transparent shadow-none hover:border-input focus-visible:ring-1 focus-visible:ring-offset-0"
               />
               <Button
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
                 onClick={() => {
                   const next = (form.customTechFields ?? []).filter((_, i) => i !== idx);
                   set("customTechFields", next);
                 }}
                 aria-label="Ta bort fält"
               >
-                <X className="h-4 w-4" />
+                <X className="h-3.5 w-3.5" />
               </Button>
             </div>
             <Input
               value={cf.value}
+              className="touch-input"
               onChange={(e) => {
                 const next = [...(form.customTechFields ?? [])];
                 next[idx] = { ...next[idx], value: e.target.value };
