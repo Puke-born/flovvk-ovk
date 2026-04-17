@@ -113,6 +113,7 @@ export interface Unit {
   ratedPower?: string;
   airflow?: string;
   qNozzle?: string;
+  customTechFields?: { id: string; label: string; value: string }[];
   // Status
   status?: AggregateStatus;
   replacementInterval?: ReplacementInterval;

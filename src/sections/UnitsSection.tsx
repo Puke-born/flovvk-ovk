@@ -1,8 +1,9 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Trash2, Copy } from "lucide-react";
+import { Plus, Trash2, Copy, X } from "lucide-react";
 import {
   db,
+  uid,
   addUnit,
   updateUnit,
   duplicateUnit,
@@ -14,6 +15,7 @@ import {
   INSPECTION_INTERVALS,
   type Unit,
 } from "@/lib/db";
+import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Field, TextAreaField } from "@/components/Field";
@@ -276,6 +278,60 @@ function UnitEditor({
         <Field label="Märkeffekt" value={form.ratedPower ?? ""} onChange={(e) => set("ratedPower", e.target.value)} />
         <Field label="Luftmängd" value={form.airflow ?? ""} onChange={(e) => set("airflow", e.target.value)} />
         <Field label="Q-dysa" value={form.qNozzle ?? ""} onChange={(e) => set("qNozzle", e.target.value)} />
+        {(form.customTechFields ?? []).map((cf, idx) => (
+          <div key={cf.id} className="space-y-1.5">
+            <div className="flex items-center gap-1">
+              <Input
+                value={cf.label}
+                placeholder="Rubrik"
+                onChange={(e) => {
+                  const next = [...(form.customTechFields ?? [])];
+                  next[idx] = { ...next[idx], label: e.target.value };
+                  set("customTechFields", next);
+                }}
+                className="h-8 text-xs font-medium"
+              />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="h-8 w-8 shrink-0 text-muted-foreground hover:text-destructive"
+                onClick={() => {
+                  const next = (form.customTechFields ?? []).filter((_, i) => i !== idx);
+                  set("customTechFields", next);
+                }}
+                aria-label="Ta bort fält"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            </div>
+            <Input
+              value={cf.value}
+              onChange={(e) => {
+                const next = [...(form.customTechFields ?? [])];
+                next[idx] = { ...next[idx], value: e.target.value };
+                set("customTechFields", next);
+              }}
+            />
+          </div>
+        ))}
+        <div className="sm:col-span-2 lg:col-span-3">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              const next = [
+                ...(form.customTechFields ?? []),
+                { id: uid(), label: "", value: "" },
+              ];
+              set("customTechFields", next);
+            }}
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Lägg till fält
+          </Button>
+        </div>
       </Section>
 
       <Section title="Bedömning">
