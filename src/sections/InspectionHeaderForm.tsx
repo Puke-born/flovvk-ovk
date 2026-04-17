@@ -1,11 +1,20 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
-import { db, updateInspection, uid, type Contact, type Inspection } from "@/lib/db";
+import { db, updateInspection, assignInspector, uid, type Contact, type Inspection } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/Field";
 import { ContactPicker } from "@/components/ContactPicker";
 import { ContactDialog } from "@/components/ContactDialog";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 
 interface Props {
   inspection: Inspection;
@@ -14,6 +23,7 @@ interface Props {
 export function InspectionHeaderForm({ inspection }: Props) {
   const owners = useLiveQuery(() => db.propertyOwners.toArray(), [], []);
   const ops = useLiveQuery(() => db.operationsManagers.toArray(), [], []);
+  const inspectors = useLiveQuery(() => db.inspectors.toArray(), [], []);
 
   const [form, setForm] = useState({
     propertyDesignation: inspection.propertyDesignation ?? "",
