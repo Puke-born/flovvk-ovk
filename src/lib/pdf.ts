@@ -96,8 +96,7 @@ export function exportIntygPdf(ctx: PdfContext) {
     margin: { left, right: 14 },
   });
 
-  // signature block
-  // @ts-expect-error lastAutoTable injected by jspdf-autotable
+  // signature block (lastAutoTable injected by jspdf-autotable)
   const endY = (doc as any).lastAutoTable?.finalY ?? y + 60;
   let sy = endY + 14;
   doc.setFont("helvetica", "bold");
