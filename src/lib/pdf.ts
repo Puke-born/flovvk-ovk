@@ -62,6 +62,7 @@ export function exportIntygPdf(ctx: PdfContext) {
     ["Fastighetsbeteckning", ctx.inspection.propertyDesignation],
     ["Adress", [ctx.inspection.address, ctx.inspection.postalCode, ctx.inspection.city].filter(Boolean).join(", ")],
     ["Byggår", ctx.inspection.buildingYear ?? ""],
+    ["Ombyggnadsår", ctx.inspection.renovationYear ?? ""],
     ["Byggnorm", ctx.inspection.buildingNorm ?? ""],
   ];
   propLines.forEach(([k, v]) => {
@@ -177,6 +178,7 @@ export function exportProtokollPdf(ctx: PdfContext) {
       ["Fastighetsbeteckning", ctx.inspection.propertyDesignation],
       ["Adress", [ctx.inspection.address, ctx.inspection.postalCode, ctx.inspection.city].filter(Boolean).join(", ")],
       ["Byggår", ctx.inspection.buildingYear ?? ""],
+      ["Ombyggnadsår", ctx.inspection.renovationYear ?? ""],
       ["Bygg.ID", ctx.inspection.buildingId ?? ""],
       ["Byggnorm", ctx.inspection.buildingNorm ?? ""],
     ]);
