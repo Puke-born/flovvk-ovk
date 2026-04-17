@@ -43,9 +43,11 @@ export interface Contact {
 }
 
 export interface Inspector {
-  id: "inspector";
+  id: string;
   name: string;
   authorization?: string;
+  certificationNumber?: string;
+  signature?: string; // base64 PNG data URL
   phone?: string;
   email?: string;
   company?: string;
