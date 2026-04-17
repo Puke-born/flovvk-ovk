@@ -71,9 +71,12 @@ export interface Inspection {
   // Linked
   propertyOwnerId?: string;
   operationsManagerId?: string;
+  inspectorId?: string;
   // Inspector snapshot
   inspectorName?: string;
   inspectorAuthorization?: string;
+  inspectorCertificationNumber?: string;
+  inspectorSignature?: string;
   inspectorPhone?: string;
   inspectorEmail?: string;
   inspectorCompany?: string;
