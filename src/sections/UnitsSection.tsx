@@ -253,8 +253,10 @@ function UnitEditor({
         <Field
           label="Ombesiktningsdag"
           type="date"
-          value={form.reInspectionDate ?? ""}
+          value={form.inspectionType === "Ombesiktning" ? (form.reInspectionDate ?? "") : ""}
           onChange={(e) => set("reInspectionDate", e.target.value)}
+          disabled={form.inspectionType !== "Ombesiktning"}
+          title={form.inspectionType !== "Ombesiktning" ? "Välj 'Ombesiktning' som typ för att aktivera" : undefined}
         />
         <Field
           label="Nästa ord. besiktning"
