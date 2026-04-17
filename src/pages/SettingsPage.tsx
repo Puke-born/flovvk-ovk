@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Trash2, Pencil } from "lucide-react";
-import { db, type Contact, type Inspector, uid } from "@/lib/db";
+import { db, type Contact, type Inspector, type BuildingNorm, uid } from "@/lib/db";
 import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ContactDialog } from "@/components/ContactDialog";
 import { InspectorDialog } from "@/components/InspectorDialog";
+import { BuildingNormDialog } from "@/components/BuildingNormDialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 
@@ -183,16 +184,102 @@ function InspectorList() {
   );
 }
 
+function BuildingNormList() {
+  const items = useLiveQuery(
+    () => db.buildingNorms.toArray().then((arr) => arr.sort((a, b) => (a.year || "").localeCompare(b.year || ""))),
+    [],
+    [],
+  );
+  const [open, setOpen] = useState(false);
+  const [editing, setEditing] = useState<BuildingNorm | undefined>();
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm text-muted-foreground">
+        Lägg upp byggnormer kopplade till årtal som referens när du fyller i fastighetsdata.
+      </p>
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-muted-foreground">
+          {items?.length ?? 0} {items?.length === 1 ? "norm" : "normer"}
+        </p>
+        <Button
+          onClick={() => {
+            setEditing(undefined);
+            setOpen(true);
+          }}
+          className="touch-button"
+        >
+          <Plus className="h-4 w-4 mr-2" />
+          Lägg till
+        </Button>
+      </div>
+      <div className="grid gap-2">
+        {items?.map((n) => (
+          <Card key={n.id} className="p-3 flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <div className="font-semibold truncate">
+                {n.year} — {n.norm}
+              </div>
+              {n.note && <div className="text-sm text-muted-foreground truncate">{n.note}</div>}
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11"
+              onClick={() => {
+                setEditing(n);
+                setOpen(true);
+              }}
+            >
+              <Pencil className="h-4 w-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-11 w-11 text-muted-foreground hover:text-destructive"
+              onClick={async () => {
+                await db.buildingNorms.delete(n.id);
+                toast.success("Raderad");
+              }}
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          </Card>
+        ))}
+        {items && items.length === 0 && (
+          <Card className="p-6 text-center text-muted-foreground border-dashed">Inga byggnormer ännu.</Card>
+        )}
+      </div>
+      <BuildingNormDialog
+        open={open}
+        onOpenChange={setOpen}
+        initial={editing}
+        title={editing ? "Redigera byggnorm" : "Ny byggnorm"}
+        onSave={async (data) => {
+          if (editing) {
+            await db.buildingNorms.update(editing.id, data);
+            toast.success("Sparat");
+          } else {
+            await db.buildingNorms.add({ id: uid(), ...data });
+            toast.success("Tillagd");
+          }
+        }}
+      />
+    </div>
+  );
+}
+
 export default function SettingsPage() {
   return (
     <AppShell title="Inställningar">
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Inställningar</h1>
         <Tabs defaultValue="inspector">
-          <TabsList className="h-12 w-full grid grid-cols-3">
+          <TabsList className="h-12 w-full grid grid-cols-2 sm:grid-cols-4">
             <TabsTrigger value="inspector" className="text-base h-10">Besiktningsmän</TabsTrigger>
             <TabsTrigger value="owners" className="text-base h-10">Fastighetsägare</TabsTrigger>
             <TabsTrigger value="ops" className="text-base h-10">Driftansvariga</TabsTrigger>
+            <TabsTrigger value="norms" className="text-base h-10">Byggnormer</TabsTrigger>
           </TabsList>
           <TabsContent value="inspector" className="mt-4">
             <Card className="p-4 sm:p-6">
@@ -207,6 +294,11 @@ export default function SettingsPage() {
           <TabsContent value="ops" className="mt-4">
             <Card className="p-4 sm:p-6">
               <ContactList table="operationsManagers" />
+            </Card>
+          </TabsContent>
+          <TabsContent value="norms" className="mt-4">
+            <Card className="p-4 sm:p-6">
+              <BuildingNormList />
             </Card>
           </TabsContent>
         </Tabs>

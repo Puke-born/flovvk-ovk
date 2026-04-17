@@ -31,6 +31,13 @@ export const INSPECTION_TYPES = [
 ] as const;
 export const INSPECTION_INTERVALS = ["3 år", "6 år"] as const;
 
+export interface BuildingNorm {
+  id: string;
+  year: string;
+  norm: string;
+  note?: string;
+}
+
 export interface Contact {
   id: string;
   name: string;
@@ -129,6 +136,7 @@ class OvkDB extends Dexie {
   operationsManagers!: Table<Contact, string>;
   inspector!: Table<Inspector, string>; // legacy single-record (kept for migration)
   inspectors!: Table<Inspector, string>;
+  buildingNorms!: Table<BuildingNorm, string>;
 
   constructor() {
     super("ovk-app");
@@ -154,6 +162,15 @@ class OvkDB extends Dexie {
           await tx.table("inspectors").add({ ...old, id: uid() });
         }
       });
+    this.version(3).stores({
+      inspections: "id, createdAt, updatedAt, propertyDesignation, archived",
+      units: "id, inspectionId, order, updatedAt",
+      propertyOwners: "id, name",
+      operationsManagers: "id, name",
+      inspector: "id",
+      inspectors: "id, name",
+      buildingNorms: "id, year",
+    });
   }
 }
 
