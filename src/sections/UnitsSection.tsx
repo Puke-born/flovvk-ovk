@@ -277,7 +277,7 @@ function UnitEditor({
       <Section title="Tekniska data">
         <Field label="Märkeffekt" value={form.ratedPower ?? ""} onChange={(e) => set("ratedPower", e.target.value)} />
         <Field label="Luftmängd" value={form.airflow ?? ""} onChange={(e) => set("airflow", e.target.value)} />
-        <Field label="Q-dysa" value={form.qNozzle ?? ""} onChange={(e) => set("qNozzle", e.target.value)} />
+        
         {(form.customTechFields ?? []).map((cf, idx) => (
           <div key={cf.id} className="space-y-1.5">
             <div className="flex items-center gap-1">
