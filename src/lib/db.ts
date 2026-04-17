@@ -125,7 +125,8 @@ class OvkDB extends Dexie {
   units!: Table<Unit, string>;
   propertyOwners!: Table<Contact, string>;
   operationsManagers!: Table<Contact, string>;
-  inspector!: Table<Inspector, string>;
+  inspector!: Table<Inspector, string>; // legacy single-record (kept for migration)
+  inspectors!: Table<Inspector, string>;
 
   constructor() {
     super("ovk-app");
@@ -136,6 +137,21 @@ class OvkDB extends Dexie {
       operationsManagers: "id, name",
       inspector: "id",
     });
+    this.version(2)
+      .stores({
+        inspections: "id, createdAt, updatedAt, propertyDesignation, archived",
+        units: "id, inspectionId, order, updatedAt",
+        propertyOwners: "id, name",
+        operationsManagers: "id, name",
+        inspector: "id",
+        inspectors: "id, name",
+      })
+      .upgrade(async (tx) => {
+        const old = await tx.table("inspector").get("inspector");
+        if (old && old.name) {
+          await tx.table("inspectors").add({ ...old, id: uid() });
+        }
+      });
   }
 }
 
@@ -145,7 +161,8 @@ export const uid = () =>
   globalThis.crypto?.randomUUID?.() ?? Math.random().toString(36).slice(2) + Date.now().toString(36);
 
 export async function createInspection(): Promise<string> {
-  const inspector = await db.inspector.get("inspector");
+  const inspectors = await db.inspectors.toArray();
+  const inspector = inspectors[0];
   const now = Date.now();
   const id = uid();
   await db.inspections.add({
@@ -153,8 +170,11 @@ export async function createInspection(): Promise<string> {
     createdAt: now,
     updatedAt: now,
     propertyDesignation: "",
+    inspectorId: inspector?.id,
     inspectorName: inspector?.name,
     inspectorAuthorization: inspector?.authorization,
+    inspectorCertificationNumber: inspector?.certificationNumber,
+    inspectorSignature: inspector?.signature,
     inspectorPhone: inspector?.phone,
     inspectorEmail: inspector?.email,
     inspectorCompany: inspector?.company,
@@ -163,6 +183,24 @@ export async function createInspection(): Promise<string> {
     inspectorCity: inspector?.city,
   });
   return id;
+}
+
+export async function assignInspector(inspectionId: string, inspectorId: string) {
+  const ins = await db.inspectors.get(inspectorId);
+  if (!ins) return;
+  await updateInspection(inspectionId, {
+    inspectorId: ins.id,
+    inspectorName: ins.name,
+    inspectorAuthorization: ins.authorization,
+    inspectorCertificationNumber: ins.certificationNumber,
+    inspectorSignature: ins.signature,
+    inspectorPhone: ins.phone,
+    inspectorEmail: ins.email,
+    inspectorCompany: ins.company,
+    inspectorAddress: ins.address,
+    inspectorPostalCode: ins.postalCode,
+    inspectorCity: ins.city,
+  });
 }
 
 export async function addUnit(inspectionId: string): Promise<string> {
