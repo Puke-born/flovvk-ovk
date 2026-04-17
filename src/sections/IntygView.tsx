@@ -25,7 +25,10 @@ export function IntygView({ inspection }: Props) {
     () => (inspection.operationsManagerId ? db.operationsManagers.get(inspection.operationsManagerId) : undefined),
     [inspection.operationsManagerId],
   );
-  const inspector = useLiveQuery(() => db.inspector.get("inspector"), []);
+  const inspector = useLiveQuery(
+    () => (inspection.inspectorId ? db.inspectors.get(inspection.inspectorId) : undefined),
+    [inspection.inspectorId],
+  );
 
   const ctx = { inspection, units: units ?? [], propertyOwner: owner, operationsManager: ops, inspector };
 
@@ -146,10 +149,26 @@ export function IntygView({ inspection }: Props) {
             <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-1 text-sm">
               <Row k="Namn" v={inspection.inspectorName ?? inspector?.name} />
               <Row k="Behörighet" v={inspection.inspectorAuthorization ?? inspector?.authorization} />
+              <Row
+                k="Certifieringsnummer"
+                v={inspection.inspectorCertificationNumber ?? inspector?.certificationNumber}
+              />
               <Row k="Företag" v={inspection.inspectorCompany ?? inspector?.company} />
               <Row k="Telefon" v={inspection.inspectorPhone ?? inspector?.phone} />
               <Row k="E-post" v={inspection.inspectorEmail ?? inspector?.email} />
             </dl>
+            {(inspection.inspectorSignature ?? inspector?.signature) && (
+              <div className="mt-4">
+                <div className="text-xs text-muted-foreground uppercase tracking-wide mb-1">
+                  Signatur
+                </div>
+                <img
+                  src={inspection.inspectorSignature ?? inspector?.signature}
+                  alt="Signatur"
+                  className="h-20 object-contain bg-background border rounded"
+                />
+              </div>
+            )}
           </section>
         </div>
       </Card>

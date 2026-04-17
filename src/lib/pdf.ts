@@ -108,6 +108,7 @@ export function exportIntygPdf(ctx: PdfContext) {
   const insLines = [
     ["Namn", ctx.inspection.inspectorName ?? ins?.name ?? ""],
     ["Behörighet", ctx.inspection.inspectorAuthorization ?? ins?.authorization ?? ""],
+    ["Certifieringsnummer", ctx.inspection.inspectorCertificationNumber ?? ins?.certificationNumber ?? ""],
     ["Företag", ctx.inspection.inspectorCompany ?? ins?.company ?? ""],
     ["Telefon", ctx.inspection.inspectorPhone ?? ins?.phone ?? ""],
     ["E-post", ctx.inspection.inspectorEmail ?? ins?.email ?? ""],
@@ -120,8 +121,19 @@ export function exportIntygPdf(ctx: PdfContext) {
     sy += 5;
   });
 
-  // signature line
-  sy += 12;
+  // signature image (above the line if present)
+  const signature = ctx.inspection.inspectorSignature ?? ins?.signature;
+  sy += 8;
+  if (signature) {
+    try {
+      doc.addImage(signature, "PNG", left, sy - 4, 70, 18);
+      sy += 16;
+    } catch {
+      // ignore invalid image data
+    }
+  } else {
+    sy += 4;
+  }
   doc.setDrawColor("#1a1f2c");
   doc.line(left, sy, left + 80, sy);
   doc.setFontSize(8);
