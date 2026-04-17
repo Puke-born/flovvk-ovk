@@ -193,6 +193,9 @@ export function exportProtokollPdf(ctx: PdfContext) {
       ["Märkeffekt", u.ratedPower ?? ""],
       ["Luftmängd", u.airflow ?? ""],
       ["Q-dysa", u.qNozzle ?? ""],
+      ...((u.customTechFields ?? [])
+        .filter((cf) => cf.label || cf.value)
+        .map((cf) => [cf.label || "—", cf.value ?? ""] as [string, string])),
     ]);
 
     block("Besiktning", [
