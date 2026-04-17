@@ -9,6 +9,8 @@ import { AppShell } from "@/components/AppShell";
 import { InspectionHeaderForm } from "@/sections/InspectionHeaderForm";
 import { UnitsSection } from "@/sections/UnitsSection";
 import { IntygView } from "@/sections/IntygView";
+import { exportIntygPdf, exportProtokollPdf } from "@/lib/pdf";
+import { toast } from "sonner";
 
 export default function InspectionPage() {
   const { id } = useParams<{ id: string }>();
