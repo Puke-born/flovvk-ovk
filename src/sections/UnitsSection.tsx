@@ -172,13 +172,13 @@ function UnitEditor({
           {form.systemDesignation || <span className="italic text-muted-foreground">Namnlöst aggregat</span>}
         </h3>
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" className="h-10" onClick={onDuplicate}>
+          <Button variant="outline" size="sm" onClick={onDuplicate}>
             <Copy className="h-4 w-4 mr-2" />
             Duplicera
           </Button>
           <AlertDialog>
             <AlertDialogTrigger asChild>
-              <Button variant="outline" size="sm" className="h-10 text-destructive hover:text-destructive">
+              <Button variant="outline" size="sm" className="text-destructive hover:text-destructive">
                 <Trash2 className="h-4 w-4 mr-2" />
                 Radera
               </Button>

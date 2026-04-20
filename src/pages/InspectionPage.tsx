@@ -89,17 +89,17 @@ export default function InspectionPage() {
       <Button
         size="sm"
         variant="ghost"
-        className="h-10 px-2 sm:px-3"
+        className="h-9 px-2 sm:px-3"
         onClick={() => handleExport("intyg")}
         title="Exportera Intyg (PDF)"
       >
-        <FileDown className="h-4 w-4 sm:mr-1.5" />
         <span className="hidden sm:inline">Intyg</span>
+        <FileDown className="h-4 w-4 sm:hidden" />
       </Button>
       <Button
         size="sm"
         variant="ghost"
-        className="h-10 px-2 sm:px-3"
+        className="h-9 px-2 sm:px-3"
         onClick={() => handleExport("protokoll")}
         title="Exportera Protokoll (PDF)"
       >
@@ -123,11 +123,11 @@ export default function InspectionPage() {
         <InspectionHeaderForm inspection={inspection} />
 
         <Tabs value={tab} onValueChange={setTab} className="mt-6">
-          <TabsList className="h-12 w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
-            <TabsTrigger value="intyg" className="text-base h-10">
+          <TabsList className="h-11 w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
+            <TabsTrigger value="intyg" className="text-base h-9">
               Intyg
             </TabsTrigger>
-            <TabsTrigger value="aggregate" className="text-base h-10">
+            <TabsTrigger value="aggregate" className="text-base h-9">
               Aggregat
             </TabsTrigger>
           </TabsList>
