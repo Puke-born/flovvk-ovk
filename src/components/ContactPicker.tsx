@@ -35,7 +35,7 @@ export function ContactPicker({ label, value, contacts, onSelect, onAddNew }: Co
             id={id}
             variant="outline"
             role="combobox"
-            className="h-12 justify-between text-base font-normal"
+            className="h-11 justify-between text-base font-normal"
           >
             <span className={cn("truncate", !selected && "text-muted-foreground")}>
               {selected ? selected.name : "Välj eller sök…"}
