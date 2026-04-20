@@ -180,7 +180,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
                 set("buildingNorm", v === "__none__" ? "" : v);
               }}
             >
-              <SelectTrigger className="h-12 text-base">
+              <SelectTrigger className="h-11 text-base">
                 <SelectValue placeholder="Välj byggnorm…" />
               </SelectTrigger>
               <SelectContent>
@@ -282,7 +282,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
               }
             }}
           >
-            <SelectTrigger className="h-12 text-base">
+            <SelectTrigger className="h-11 text-base">
               <SelectValue placeholder="Välj besiktningsman…" />
             </SelectTrigger>
             <SelectContent>

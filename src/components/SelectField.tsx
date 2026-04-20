@@ -35,7 +35,7 @@ export function SelectField({
         {label}
       </Label>
       <Select value={value || "__none__"} onValueChange={(v) => onValueChange(v === "__none__" ? "" : v)}>
-        <SelectTrigger id={id} className="h-12 text-base">
+        <SelectTrigger id={id} className="h-11 text-base">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
