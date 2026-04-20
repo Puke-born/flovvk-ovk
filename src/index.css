@@ -101,12 +101,12 @@
 }
 
 @layer components {
-  /* Bigger touch targets for tablet */
+  /* Unified touch targets for tablet — all form controls share this height */
   .touch-input {
-    @apply h-12 text-base;
+    @apply h-11 text-base;
   }
   .touch-button {
-    @apply min-h-[48px] text-base;
+    @apply h-11 text-base;
   }
 }
 
