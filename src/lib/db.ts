@@ -85,6 +85,7 @@ export interface Inspection {
   inspectorPhone?: string;
   inspectorEmail?: string;
   inspectorCompany?: string;
+  inspectorOrgNumber?: string;
   inspectorAddress?: string;
   inspectorPostalCode?: string;
   inspectorCity?: string;
