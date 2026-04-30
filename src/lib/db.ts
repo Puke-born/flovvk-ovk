@@ -179,6 +179,16 @@ class OvkDB extends Dexie {
       inspectors: "id, name",
       buildingNorms: "id, year",
     });
+    this.version(4).stores({
+      inspections: "id, createdAt, updatedAt, propertyDesignation, archived",
+      units: "id, inspectionId, order, updatedAt",
+      propertyOwners: "id, name",
+      operationsManagers: "id, name",
+      inspector: "id",
+      inspectors: "id, name",
+      buildingNorms: "id, year",
+      excelTemplate: "id",
+    });
   }
 }
 
