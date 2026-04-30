@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, FileDown, Save } from "lucide-react";
+import { ArrowLeft, Save } from "lucide-react";
 import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,8 +9,6 @@ import { AppShell } from "@/components/AppShell";
 import { InspectionHeaderForm } from "@/sections/InspectionHeaderForm";
 import { UnitsSection } from "@/sections/UnitsSection";
 import { IntygView } from "@/sections/IntygView";
-import { exportIntygPdf, exportProtokollPdf } from "@/lib/pdf";
-import { toast } from "sonner";
 
 export default function InspectionPage() {
   const { id } = useParams<{ id: string }>();
