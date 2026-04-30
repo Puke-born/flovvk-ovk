@@ -129,6 +129,13 @@ export interface Unit {
   notes?: string;
 }
 
+export interface ExcelTemplate {
+  id: string; // always "template"
+  fileName: string;
+  uploadedAt: number;
+  data: ArrayBuffer;
+}
+
 class OvkDB extends Dexie {
   inspections!: Table<Inspection, string>;
   units!: Table<Unit, string>;
@@ -137,6 +144,7 @@ class OvkDB extends Dexie {
   inspector!: Table<Inspector, string>; // legacy single-record (kept for migration)
   inspectors!: Table<Inspector, string>;
   buildingNorms!: Table<BuildingNorm, string>;
+  excelTemplate!: Table<ExcelTemplate, string>;
 
   constructor() {
     super("ovk-app");
