@@ -85,6 +85,12 @@ export function InspectorDialog({ open, onOpenChange, initial, title, onSave }: 
             containerClassName="sm:col-span-2"
           />
           <Field
+            label="Organisationsnummer"
+            value={form.orgNumber ?? ""}
+            onChange={(e) => set("orgNumber", e.target.value)}
+            containerClassName="sm:col-span-2"
+          />
+          <Field
             label="Telefon"
             value={form.phone ?? ""}
             onChange={(e) => set("phone", e.target.value)}
