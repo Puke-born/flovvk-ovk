@@ -47,14 +47,16 @@ function replaceInCell(
     if (sig && sig.startsWith("data:image/")) {
       const m = sig.match(/^data:image\/(\w+);base64,(.+)$/);
       if (m) {
-        const ext = m[1].toLowerCase() as "png" | "jpeg" | "gif";
+        const rawExt = m[1].toLowerCase();
+        const ext: "png" | "jpeg" | "gif" =
+          rawExt === "jpg" || rawExt === "jpeg" ? "jpeg" : rawExt === "gif" ? "gif" : "png";
         const base64 = m[2];
-        const imgId = workbook.addImage({ base64, extension: ext === "jpg" ? "jpeg" : ext });
-        const col = (cell.col as number) - 1;
-        const row = (cell.row as number) - 1;
+        const imgId = workbook.addImage({ base64, extension: ext });
+        const col = Number(cell.col) - 1;
+        const row = Number(cell.row) - 1;
         worksheet.addImage(imgId, {
-          tl: { col, row },
-          br: { col: col + 1, row: row + 1 },
+          tl: { col, row } as unknown as ExcelJS.Anchor,
+          br: { col: col + 1, row: row + 1 } as unknown as ExcelJS.Anchor,
           editAs: "oneCell",
         });
         cell.value = null;
