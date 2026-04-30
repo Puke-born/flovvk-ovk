@@ -54,6 +54,7 @@ export interface Inspector {
   phone?: string;
   email?: string;
   company?: string;
+  orgNumber?: string;
   address?: string;
   postalCode?: string;
   city?: string;
