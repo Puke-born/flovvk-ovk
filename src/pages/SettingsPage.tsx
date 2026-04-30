@@ -303,6 +303,11 @@ export default function SettingsPage() {
               <BuildingNormList />
             </Card>
           </TabsContent>
+          <TabsContent value="excel" className="mt-4">
+            <Card className="p-4 sm:p-6">
+              <ExcelTemplateManager />
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
     </AppShell>
