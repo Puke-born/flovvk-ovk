@@ -276,11 +276,12 @@ export default function SettingsPage() {
       <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
         <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Inställningar</h1>
         <Tabs defaultValue="inspector">
-          <TabsList className="h-11 w-full grid grid-cols-2 sm:grid-cols-4">
+          <TabsList className="h-11 w-full grid grid-cols-2 sm:grid-cols-5">
             <TabsTrigger value="inspector" className="text-base h-9">Besiktningsmän</TabsTrigger>
             <TabsTrigger value="owners" className="text-base h-9">Fastighetsägare</TabsTrigger>
             <TabsTrigger value="ops" className="text-base h-9">Driftansvariga</TabsTrigger>
             <TabsTrigger value="norms" className="text-base h-9">Byggnormer</TabsTrigger>
+            <TabsTrigger value="excel" className="text-base h-9">Excel-mall</TabsTrigger>
           </TabsList>
           <TabsContent value="inspector" className="mt-4">
             <Card className="p-4 sm:p-6">
