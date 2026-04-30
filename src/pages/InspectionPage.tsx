@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save } from "lucide-react";
+import { ArrowLeft, Save, FileSpreadsheet } from "lucide-react";
 import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -9,13 +9,31 @@ import { AppShell } from "@/components/AppShell";
 import { InspectionHeaderForm } from "@/sections/InspectionHeaderForm";
 import { UnitsSection } from "@/sections/UnitsSection";
 import { IntygView } from "@/sections/IntygView";
+import { exportInspectionToExcel } from "@/lib/excelExport";
+import { toast } from "sonner";
 
 export default function InspectionPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const inspection = useLiveQuery(() => (id ? db.inspections.get(id) : undefined), [id]);
+  const template = useLiveQuery(() => db.excelTemplate.get("template"), []);
   const [tab, setTab] = useState<string>("aggregate");
   const [savedFlash, setSavedFlash] = useState(false);
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    if (!id) return;
+    setExporting(true);
+    try {
+      await exportInspectionToExcel(id);
+      toast.success("Excel-fil exporterad");
+    } catch (e) {
+      console.error(e);
+      toast.error(e instanceof Error ? e.message : "Export misslyckades");
+    } finally {
+      setExporting(false);
+    }
+  };
 
   useEffect(() => {
     if (!inspection) return;
@@ -60,6 +78,16 @@ export default function InspectionPage() {
 
   const right = (
     <div className="flex items-center gap-1 sm:gap-2 mr-1">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={handleExport}
+        disabled={!template || exporting}
+        title={!template ? "Ladda upp en Excel-mall i Inställningar" : "Exportera till Excel"}
+      >
+        <FileSpreadsheet className="h-4 w-4 sm:mr-1" />
+        <span className="hidden sm:inline">{exporting ? "Exporterar…" : "Excel"}</span>
+      </Button>
       <span
         className={`hidden md:inline-flex items-center gap-1 text-xs ml-1 transition-opacity ${
           savedFlash ? "opacity-100 text-success" : "opacity-50 text-muted-foreground"
