@@ -78,6 +78,16 @@ export default function InspectionPage() {
 
   const right = (
     <div className="flex items-center gap-1 sm:gap-2 mr-1">
+      <Button
+        size="sm"
+        variant="outline"
+        onClick={handleExport}
+        disabled={!template || exporting}
+        title={!template ? "Ladda upp en Excel-mall i Inställningar" : "Exportera till Excel"}
+      >
+        <FileSpreadsheet className="h-4 w-4 sm:mr-1" />
+        <span className="hidden sm:inline">{exporting ? "Exporterar…" : "Excel"}</span>
+      </Button>
       <span
         className={`hidden md:inline-flex items-center gap-1 text-xs ml-1 transition-opacity ${
           savedFlash ? "opacity-100 text-success" : "opacity-50 text-muted-foreground"
