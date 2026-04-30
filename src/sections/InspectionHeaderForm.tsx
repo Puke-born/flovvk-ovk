@@ -273,6 +273,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
                   inspectorPhone: undefined,
                   inspectorEmail: undefined,
                   inspectorCompany: undefined,
+                  inspectorOrgNumber: undefined,
                   inspectorAddress: undefined,
                   inspectorPostalCode: undefined,
                   inspectorCity: undefined,

@@ -24,11 +24,7 @@ export const REPLACEMENT_OPTIONS = [
 export type ReplacementInterval = (typeof REPLACEMENT_OPTIONS)[number] | "";
 
 export const VENT_TYPES = ["F", "FT", "FTX", "S", "FX"] as const;
-export const INSPECTION_TYPES = [
-  "Första besiktning",
-  "Återkommande besiktning",
-  "Ombesiktning",
-] as const;
+export const INSPECTION_TYPES = ["FB", "ÅB", "OB"] as const;
 export const INSPECTION_INTERVALS = ["3 år", "6 år"] as const;
 
 export interface BuildingNorm {
@@ -58,6 +54,7 @@ export interface Inspector {
   phone?: string;
   email?: string;
   company?: string;
+  orgNumber?: string;
   address?: string;
   postalCode?: string;
   city?: string;
@@ -88,6 +85,7 @@ export interface Inspection {
   inspectorPhone?: string;
   inspectorEmail?: string;
   inspectorCompany?: string;
+  inspectorOrgNumber?: string;
   inspectorAddress?: string;
   inspectorPostalCode?: string;
   inspectorCity?: string;
@@ -215,6 +213,7 @@ export async function createInspection(): Promise<string> {
     inspectorPhone: inspector?.phone,
     inspectorEmail: inspector?.email,
     inspectorCompany: inspector?.company,
+    inspectorOrgNumber: inspector?.orgNumber,
     inspectorAddress: inspector?.address,
     inspectorPostalCode: inspector?.postalCode,
     inspectorCity: inspector?.city,
@@ -234,6 +233,7 @@ export async function assignInspector(inspectionId: string, inspectorId: string)
     inspectorPhone: ins.phone,
     inspectorEmail: ins.email,
     inspectorCompany: ins.company,
+    inspectorOrgNumber: ins.orgNumber,
     inspectorAddress: ins.address,
     inspectorPostalCode: ins.postalCode,
     inspectorCity: ins.city,

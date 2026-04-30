@@ -26,6 +26,7 @@ export function InspectorDialog({ open, onOpenChange, initial, title, onSave }: 
     certificationNumber: "",
     signature: undefined,
     company: "",
+    orgNumber: "",
     phone: "",
     email: "",
     address: "",
@@ -41,6 +42,7 @@ export function InspectorDialog({ open, onOpenChange, initial, title, onSave }: 
         certificationNumber: initial?.certificationNumber ?? "",
         signature: initial?.signature,
         company: initial?.company ?? "",
+        orgNumber: initial?.orgNumber ?? "",
         phone: initial?.phone ?? "",
         email: initial?.email ?? "",
         address: initial?.address ?? "",
@@ -80,6 +82,12 @@ export function InspectorDialog({ open, onOpenChange, initial, title, onSave }: 
             label="Företag"
             value={form.company ?? ""}
             onChange={(e) => set("company", e.target.value)}
+            containerClassName="sm:col-span-2"
+          />
+          <Field
+            label="Organisationsnummer"
+            value={form.orgNumber ?? ""}
+            onChange={(e) => set("orgNumber", e.target.value)}
             containerClassName="sm:col-span-2"
           />
           <Field
