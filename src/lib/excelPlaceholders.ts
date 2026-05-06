@@ -15,6 +15,18 @@ export interface UnitData extends Record<string, string> {
   total: string;
 }
 
+/**
+ * Normalize a custom-field label to a placeholder key segment.
+ * Lowercase, swedish chars preserved, non-alphanumerics → "_".
+ */
+export function slugifyCustomLabel(label: string): string {
+  return (label || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9åäö]+/gi, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
 const s = (v: unknown): string => (v === undefined || v === null ? "" : String(v));
 
 function contactFields(c: Contact | undefined): Record<string, string> {
