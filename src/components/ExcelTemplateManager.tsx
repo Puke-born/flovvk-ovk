@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Upload, FileSpreadsheet, Trash2, AlertCircle, CheckCircle2 } from "lucide-react";
+import { Upload, FileSpreadsheet, Trash2, AlertCircle, CheckCircle2, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { db } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -161,8 +162,12 @@ export function ExcelTemplateManager() {
                         <Badge
                           key={p}
                           variant={known ? "secondary" : "outline"}
-                          className={!known ? "border-destructive text-destructive" : ""}
-                          title={known ? "" : "Okänd platshållare — kontrollera stavning"}
+                          className={
+                            !known
+                              ? "border-destructive text-destructive"
+                              : "bg-success/15 text-success border-success/30 hover:bg-success/15"
+                          }
+                          title={known ? "Används i mallen" : "Okänd platshållare — kontrollera stavning"}
                         >
                           {`{{${p}}}`}
                         </Badge>
@@ -185,42 +190,56 @@ export function ExcelTemplateManager() {
         </Card>
       )}
 
-      <div className="space-y-3">
-        <div className="text-sm font-semibold">Tillgängliga platshållare</div>
-        <p className="text-xs text-muted-foreground">
-          Kopiera och klistra in dessa i cellerna i din mall. Skriv exakt såhär, inklusive de
-          dubbla klammerparenteserna.
-        </p>
-        {Object.entries(AVAILABLE_PLACEHOLDERS).map(([group, keys]) => (
-          <Card key={group} className="p-3">
-            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
-              {group}
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {keys.map((k) => (
-                <code
-                  key={k}
-                  className="text-xs bg-muted px-2 py-1 rounded font-mono"
-                  onClick={(e) => {
-                    const text = `{{${k.split(" ")[0]}}}`;
-                    navigator.clipboard?.writeText(text);
-                    toast.success(`Kopierat: ${text}`);
-                    e.preventDefault();
-                  }}
-                  style={{ cursor: "copy" }}
-                >
-                  {`{{${k.split(" ")[0]}}}`}
-                  {k.includes(" ") && (
-                    <span className="text-muted-foreground ml-1 font-sans">
-                      {k.slice(k.indexOf(" "))}
-                    </span>
-                  )}
-                </code>
-              ))}
-            </div>
-          </Card>
-        ))}
-      </div>
+      <Collapsible>
+        <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold w-full justify-between p-2 rounded hover:bg-accent/50 transition-colors group">
+          <span>Tillgängliga platshållare</span>
+          <ChevronDown className="h-4 w-4 transition-transform group-data-[state=open]:rotate-180" />
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-3 pt-3">
+          <p className="text-xs text-muted-foreground">
+            Kopiera och klistra in dessa i cellerna i din mall. Skriv exakt såhär, inklusive de
+            dubbla klammerparenteserna. <span className="text-success font-medium">Gröna</span> används redan i din uppladdade mall.
+          </p>
+          {Object.entries(AVAILABLE_PLACEHOLDERS).map(([group, keys]) => (
+            <Card key={group} className="p-3">
+              <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                {group}
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {keys.map((k) => {
+                  const ph = k.split(" ")[0];
+                  const used = scan?.placeholders.includes(ph);
+                  return (
+                    <code
+                      key={k}
+                      className={`text-xs px-2 py-1 rounded font-mono ${
+                        used
+                          ? "bg-success/15 text-success ring-1 ring-success/30"
+                          : "bg-muted"
+                      }`}
+                      onClick={(e) => {
+                        const text = `{{${ph}}}`;
+                        navigator.clipboard?.writeText(text);
+                        toast.success(`Kopierat: ${text}`);
+                        e.preventDefault();
+                      }}
+                      style={{ cursor: "copy" }}
+                      title={used ? "Används i din mall" : ""}
+                    >
+                      {`{{${ph}}}`}
+                      {k.includes(" ") && (
+                        <span className="text-muted-foreground ml-1 font-sans">
+                          {k.slice(k.indexOf(" "))}
+                        </span>
+                      )}
+                    </code>
+                  );
+                })}
+              </div>
+            </Card>
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }
