@@ -121,8 +121,8 @@ function unitFields(u: Unit, index: number, total: number): UnitData {
     if (slug) base[`custom.${slug}`] = s(cf.value);
   });
   // (b) Indexerade nycklar (för okända rubriker): unit.customLabel1 / unit.customValue1 ...
-  // Reservera upp till 20 platser i mallen — tomma om fältet saknas.
-  const MAX_CUSTOM = 20;
+  // Reservera upp till 5 platser i mallen — tomma om fältet saknas.
+  const MAX_CUSTOM = 5;
   for (let i = 0; i < MAX_CUSTOM; i++) {
     const cf = customs[i];
     base[`customLabel${i + 1}`] = s(cf?.label);
