@@ -222,7 +222,12 @@ export function resolvePlaceholder(
   }
   if (key.startsWith("unit.")) {
     if (!unit) return "";
-    return unit[key.slice(5)] ?? "";
+    const sub = key.slice(5);
+    if (sub.startsWith("custom.")) {
+      const slug = slugifyCustomLabel(sub.slice(7));
+      return unit[`custom.${slug}`] ?? "";
+    }
+    return unit[sub] ?? "";
   }
   return data.inspection[key] ?? "";
 }
