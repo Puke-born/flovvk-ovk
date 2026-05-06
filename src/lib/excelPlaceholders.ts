@@ -88,7 +88,7 @@ export async function buildExportData(inspectionId: string): Promise<ExportData>
 }
 
 function unitFields(u: Unit, index: number, total: number): UnitData {
-  return {
+  const base: UnitData = {
     index: String(index),
     total: String(total),
     systemDesignation: s(u.systemDesignation),
@@ -113,6 +113,13 @@ function unitFields(u: Unit, index: number, total: number): UnitData {
     verdict: s(u.verdict),
     notes: s(u.notes),
   };
+  // Custom tech fields → unit.custom.<slug>
+  (u.customTechFields ?? []).forEach((cf) => {
+    const slug = slugifyCustomLabel(cf.label);
+    if (!slug) return;
+    base[`custom.${slug}`] = s(cf.value);
+  });
+  return base;
 }
 
 /**
