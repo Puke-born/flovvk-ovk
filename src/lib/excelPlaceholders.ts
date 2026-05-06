@@ -201,7 +201,8 @@ export const AVAILABLE_PLACEHOLDERS = {
     "unit.replacementInterval",
     "unit.verdict",
     "unit.notes",
-    "unit.custom.<rubrik> (egna fält från 'Lägg till fält' — t.ex. unit.custom.kanaltryck)",
+    "unit.custom.<rubrik> (om du vet rubriken — t.ex. unit.custom.kanaltryck)",
+    "unit.customLabel1 / unit.customValue1 ... upp till 20 (för okända rubriker — par av rubrik+värde)",
   ],
   Övrigt: ["exportDate"],
 };
