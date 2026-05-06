@@ -202,7 +202,7 @@ export const AVAILABLE_PLACEHOLDERS = {
     "unit.verdict",
     "unit.notes",
     "unit.custom.<rubrik> (om du vet rubriken — t.ex. unit.custom.kanaltryck)",
-    "unit.customLabel1 / unit.customValue1 ... upp till 20 (för okända rubriker — par av rubrik+värde)",
+    "unit.customLabel1 / unit.customValue1 ... upp till 5 (för okända rubriker — par av rubrik+värde)",
   ],
   Övrigt: ["exportDate"],
 };
