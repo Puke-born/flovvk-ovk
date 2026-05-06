@@ -162,8 +162,12 @@ export function ExcelTemplateManager() {
                         <Badge
                           key={p}
                           variant={known ? "secondary" : "outline"}
-                          className={!known ? "border-destructive text-destructive" : ""}
-                          title={known ? "" : "Okänd platshållare — kontrollera stavning"}
+                          className={
+                            !known
+                              ? "border-destructive text-destructive"
+                              : "bg-success/15 text-success border-success/30 hover:bg-success/15"
+                          }
+                          title={known ? "Används i mallen" : "Okänd platshållare — kontrollera stavning"}
                         >
                           {`{{${p}}}`}
                         </Badge>
