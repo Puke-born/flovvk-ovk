@@ -15,6 +15,18 @@ export interface UnitData extends Record<string, string> {
   total: string;
 }
 
+/**
+ * Normalize a custom-field label to a placeholder key segment.
+ * Lowercase, swedish chars preserved, non-alphanumerics → "_".
+ */
+export function slugifyCustomLabel(label: string): string {
+  return (label || "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9åäö]+/gi, "_")
+    .replace(/^_+|_+$/g, "");
+}
+
 const s = (v: unknown): string => (v === undefined || v === null ? "" : String(v));
 
 function contactFields(c: Contact | undefined): Record<string, string> {
@@ -76,7 +88,7 @@ export async function buildExportData(inspectionId: string): Promise<ExportData>
 }
 
 function unitFields(u: Unit, index: number, total: number): UnitData {
-  return {
+  const base: UnitData = {
     index: String(index),
     total: String(total),
     systemDesignation: s(u.systemDesignation),
@@ -101,6 +113,13 @@ function unitFields(u: Unit, index: number, total: number): UnitData {
     verdict: s(u.verdict),
     notes: s(u.notes),
   };
+  // Custom tech fields → unit.custom.<slug>
+  (u.customTechFields ?? []).forEach((cf) => {
+    const slug = slugifyCustomLabel(cf.label);
+    if (!slug) return;
+    base[`custom.${slug}`] = s(cf.value);
+  });
+  return base;
 }
 
 /**
@@ -173,6 +192,7 @@ export const AVAILABLE_PLACEHOLDERS = {
     "unit.replacementInterval",
     "unit.verdict",
     "unit.notes",
+    "unit.custom.<rubrik> (egna fält från 'Lägg till fält' — t.ex. unit.custom.kanaltryck)",
   ],
   Övrigt: ["exportDate"],
 };
