@@ -113,12 +113,21 @@ function unitFields(u: Unit, index: number, total: number): UnitData {
     verdict: s(u.verdict),
     notes: s(u.notes),
   };
-  // Custom tech fields → unit.custom.<slug>
-  (u.customTechFields ?? []).forEach((cf) => {
+  // Custom tech fields
+  const customs = u.customTechFields ?? [];
+  // (a) Slug-baserade nycklar (om man vet rubriken): unit.custom.<slug>
+  customs.forEach((cf) => {
     const slug = slugifyCustomLabel(cf.label);
-    if (!slug) return;
-    base[`custom.${slug}`] = s(cf.value);
+    if (slug) base[`custom.${slug}`] = s(cf.value);
   });
+  // (b) Indexerade nycklar (för okända rubriker): unit.customLabel1 / unit.customValue1 ...
+  // Reservera upp till 20 platser i mallen — tomma om fältet saknas.
+  const MAX_CUSTOM = 20;
+  for (let i = 0; i < MAX_CUSTOM; i++) {
+    const cf = customs[i];
+    base[`customLabel${i + 1}`] = s(cf?.label);
+    base[`customValue${i + 1}`] = s(cf?.value);
+  }
   return base;
 }
 
@@ -192,7 +201,8 @@ export const AVAILABLE_PLACEHOLDERS = {
     "unit.replacementInterval",
     "unit.verdict",
     "unit.notes",
-    "unit.custom.<rubrik> (egna fält från 'Lägg till fält' — t.ex. unit.custom.kanaltryck)",
+    "unit.custom.<rubrik> (om du vet rubriken — t.ex. unit.custom.kanaltryck)",
+    "unit.customLabel1 / unit.customValue1 ... upp till 20 (för okända rubriker — par av rubrik+värde)",
   ],
   Övrigt: ["exportDate"],
 };
