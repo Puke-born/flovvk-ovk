@@ -192,6 +192,7 @@ export const AVAILABLE_PLACEHOLDERS = {
     "unit.replacementInterval",
     "unit.verdict",
     "unit.notes",
+    "unit.custom.<rubrik> (egna fält från 'Lägg till fält' — t.ex. unit.custom.kanaltryck)",
   ],
   Övrigt: ["exportDate"],
 };
