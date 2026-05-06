@@ -317,21 +317,31 @@ function UnitEditor({
           </div>
         ))}
         <div className="sm:col-span-2 lg:col-span-3">
-          <Button
-            type="button"
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              const next = [
-                ...(form.customTechFields ?? []),
-                { id: uid(), label: "", value: "" },
-              ];
-              set("customTechFields", next);
-            }}
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Lägg till fält
-          </Button>
+          {(() => {
+            const count = (form.customTechFields ?? []).length;
+            const atMax = count >= 5;
+            return (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={atMax}
+                className={atMax ? "bg-muted text-muted-foreground" : undefined}
+                title={atMax ? "Max 5 extra fält" : undefined}
+                onClick={() => {
+                  if (atMax) return;
+                  const next = [
+                    ...(form.customTechFields ?? []),
+                    { id: uid(), label: "", value: "" },
+                  ];
+                  set("customTechFields", next);
+                }}
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Lägg till fält {count > 0 ? `(${count}/5)` : ""}
+              </Button>
+            );
+          })()}
         </div>
       </Section>
 
