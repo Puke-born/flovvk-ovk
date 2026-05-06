@@ -231,6 +231,6 @@ function isKnownPlaceholder(key: string): boolean {
     list.forEach((k) => all.add(k.split(" ")[0])),
   );
   if (all.has(key)) return true;
-  // Also accept any unit.* that we ship
+  if (key.startsWith("unit.custom.")) return true;
   return false;
 }
