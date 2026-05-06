@@ -232,5 +232,6 @@ function isKnownPlaceholder(key: string): boolean {
   );
   if (all.has(key)) return true;
   if (key.startsWith("unit.custom.")) return true;
+  if (/^unit\.custom(Label|Value)\d+$/.test(key)) return true;
   return false;
 }
