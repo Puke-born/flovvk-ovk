@@ -36,6 +36,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
     city: inspection.city ?? "",
     buildingId: inspection.buildingId ?? "",
     buildingNorm: inspection.buildingNorm ?? "",
+    workOrderNumber: inspection.workOrderNumber ?? "",
   });
 
   // sync if external change
