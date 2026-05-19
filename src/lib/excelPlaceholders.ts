@@ -146,6 +146,7 @@ export const AVAILABLE_PLACEHOLDERS = {
     "city",
     "buildingId",
     "buildingNorm",
+    "workOrderNumber",
   ],
   "Fastighetsägare (owner)": [
     "owner.name",
