@@ -96,6 +96,19 @@ function replaceInCell(
   }
 }
 
+const UNIT_PLACEHOLDER_RE = /\{\{\s*unit\.[a-zA-Z0-9_.]+\s*\}\}/;
+
+function cellHasUnitPlaceholder(cell: ExcelJS.Cell): boolean {
+  const v = cell.value;
+  if (typeof v === "string") return UNIT_PLACEHOLDER_RE.test(v);
+  if (v && typeof v === "object" && "richText" in v && Array.isArray((v as any).richText)) {
+    return (v as ExcelJS.CellRichTextValue).richText.some(
+      (p) => typeof p.text === "string" && UNIT_PLACEHOLDER_RE.test(p.text),
+    );
+  }
+  return false;
+}
+
 function processSheet(
   worksheet: ExcelJS.Worksheet,
   data: ExportData,
@@ -103,6 +116,42 @@ function processSheet(
   workbook: ExcelJS.Workbook,
 ): void {
   worksheet.eachRow({ includeEmpty: false }, (row) => {
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      replaceInCell(cell, data, unit, workbook, worksheet);
+    });
+  });
+}
+
+/**
+ * For non-aggregate sheets: find rows containing unit.* placeholders and
+ * assign one unit per row in order. Any remaining template rows are blanked.
+ */
+function processSheetWithUnitRows(
+  worksheet: ExcelJS.Worksheet,
+  data: ExportData,
+  workbook: ExcelJS.Workbook,
+): void {
+  // Collect unit-template rows in order
+  const unitRows: ExcelJS.Row[] = [];
+  worksheet.eachRow({ includeEmpty: false }, (row) => {
+    let hasUnit = false;
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      if (cellHasUnitPlaceholder(cell)) hasUnit = true;
+    });
+    if (hasUnit) unitRows.push(row);
+  });
+
+  // Fill per-unit rows first (without touching unit cells)
+  worksheet.eachRow({ includeEmpty: false }, (row) => {
+    if (unitRows.includes(row)) return;
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      replaceInCell(cell, data, undefined, workbook, worksheet);
+    });
+  });
+
+  // Now fill unit rows
+  unitRows.forEach((row, i) => {
+    const unit = data.units[i];
     row.eachCell({ includeEmpty: false }, (cell) => {
       replaceInCell(cell, data, unit, workbook, worksheet);
     });
@@ -160,7 +209,7 @@ export async function exportInspectionToExcel(inspectionId: string): Promise<voi
   // Process non-aggregate sheets first (replace inspection-level placeholders)
   wb.worksheets
     .filter((ws) => ws.name !== TEMPLATE_SHEET_NAME)
-    .forEach((ws) => processSheet(ws, data, undefined, wb));
+    .forEach((ws) => processSheetWithUnitRows(ws, data, wb));
 
   if (tplSheet && data.units.length > 0) {
     // Position to insert duplicated sheets — keep them where the template was
