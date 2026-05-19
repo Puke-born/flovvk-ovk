@@ -36,6 +36,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
     city: inspection.city ?? "",
     buildingId: inspection.buildingId ?? "",
     buildingNorm: inspection.buildingNorm ?? "",
+    workOrderNumber: inspection.workOrderNumber ?? "",
   });
 
   // sync if external change
@@ -49,6 +50,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
       city: inspection.city ?? "",
       buildingId: inspection.buildingId ?? "",
       buildingNorm: inspection.buildingNorm ?? "",
+      workOrderNumber: inspection.workOrderNumber ?? "",
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inspection.id]);
@@ -216,6 +218,12 @@ export function InspectionHeaderForm({ inspection }: Props) {
           value={form.city}
           onChange={(e) => set("city", e.target.value)}
           containerClassName="col-span-1 sm:col-span-1"
+        />
+        <Field
+          label="Arb.nr"
+          value={form.workOrderNumber}
+          onChange={(e) => set("workOrderNumber", e.target.value)}
+          containerClassName="col-span-2 sm:col-span-2"
         />
       </div>
 
