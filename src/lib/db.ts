@@ -73,6 +73,7 @@ export interface Inspection {
   city?: string;
   buildingId?: string;
   buildingNorm?: string;
+  workOrderNumber?: string;
   // Linked
   propertyOwnerId?: string;
   operationsManagerId?: string;
