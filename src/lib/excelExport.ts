@@ -209,7 +209,7 @@ export async function exportInspectionToExcel(inspectionId: string): Promise<voi
   // Process non-aggregate sheets first (replace inspection-level placeholders)
   wb.worksheets
     .filter((ws) => ws.name !== TEMPLATE_SHEET_NAME)
-    .forEach((ws) => processSheet(ws, data, undefined, wb));
+    .forEach((ws) => processSheetWithUnitRows(ws, data, wb));
 
   if (tplSheet && data.units.length > 0) {
     // Position to insert duplicated sheets — keep them where the template was
