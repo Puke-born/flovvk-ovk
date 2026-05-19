@@ -277,6 +277,14 @@ function BuildingNormList() {
           }
         }}
       />
+      <BuildingNormBulkDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        onImport={async (rows) => {
+          await db.buildingNorms.bulkAdd(rows.map((r) => ({ id: uid(), ...r })));
+          toast.success(`${rows.length} byggnormer tillagda`);
+        }}
+      />
     </div>
   );
 }
