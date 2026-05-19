@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { ContactDialog } from "@/components/ContactDialog";
 import { InspectorDialog } from "@/components/InspectorDialog";
 import { BuildingNormDialog } from "@/components/BuildingNormDialog";
+import { BuildingNormBulkDialog } from "@/components/BuildingNormBulkDialog";
 import { ExcelTemplateManager } from "@/components/ExcelTemplateManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -192,6 +193,7 @@ function BuildingNormList() {
     [],
   );
   const [open, setOpen] = useState(false);
+  const [bulkOpen, setBulkOpen] = useState(false);
   const [editing, setEditing] = useState<BuildingNorm | undefined>();
 
   return (
@@ -199,20 +201,29 @@ function BuildingNormList() {
       <p className="text-sm text-muted-foreground">
         Lägg upp byggnormer kopplade till årtal som referens när du fyller i fastighetsdata.
       </p>
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-2">
         <p className="text-sm text-muted-foreground">
           {items?.length ?? 0} {items?.length === 1 ? "norm" : "normer"}
         </p>
-        <Button
-          onClick={() => {
-            setEditing(undefined);
-            setOpen(true);
-          }}
-          className="touch-button"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Lägg till
-        </Button>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            onClick={() => setBulkOpen(true)}
+            className="touch-button"
+          >
+            Lägg till lista
+          </Button>
+          <Button
+            onClick={() => {
+              setEditing(undefined);
+              setOpen(true);
+            }}
+            className="touch-button"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Lägg till
+          </Button>
+        </div>
       </div>
       <div className="grid gap-2">
         {items?.map((n) => (
@@ -264,6 +275,14 @@ function BuildingNormList() {
             await db.buildingNorms.add({ id: uid(), ...data });
             toast.success("Tillagd");
           }
+        }}
+      />
+      <BuildingNormBulkDialog
+        open={bulkOpen}
+        onOpenChange={setBulkOpen}
+        onImport={async (rows) => {
+          await db.buildingNorms.bulkAdd(rows.map((r) => ({ id: uid(), ...r })));
+          toast.success(`${rows.length} byggnormer tillagda`);
         }}
       />
     </div>
