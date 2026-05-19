@@ -225,17 +225,6 @@ function BuildingNormList() {
           </Button>
         </div>
       </div>
-        <Button
-          onClick={() => {
-            setEditing(undefined);
-            setOpen(true);
-          }}
-          className="touch-button"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Lägg till
-        </Button>
-      </div>
       <div className="grid gap-2">
         {items?.map((n) => (
           <Card key={n.id} className="p-3 flex items-center gap-3">
