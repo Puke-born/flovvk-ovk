@@ -54,8 +54,6 @@ export function InspectionHeaderForm({ inspection }: Props) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inspection.id]);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [inspection.id]);
 
   useDebouncedEffect(
     () => {
