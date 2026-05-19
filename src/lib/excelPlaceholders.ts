@@ -66,6 +66,7 @@ export async function buildExportData(inspectionId: string): Promise<ExportData>
       city: s(inspection.city),
       buildingId: s(inspection.buildingId),
       buildingNorm: s(inspection.buildingNorm),
+      workOrderNumber: s(inspection.workOrderNumber),
     },
     owner: contactFields(owner),
     ops: contactFields(ops),
