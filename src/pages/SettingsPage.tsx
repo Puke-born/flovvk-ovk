@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/card";
 import { ContactDialog } from "@/components/ContactDialog";
 import { InspectorDialog } from "@/components/InspectorDialog";
 import { BuildingNormDialog } from "@/components/BuildingNormDialog";
+import { BuildingNormBulkDialog } from "@/components/BuildingNormBulkDialog";
 import { ExcelTemplateManager } from "@/components/ExcelTemplateManager";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
