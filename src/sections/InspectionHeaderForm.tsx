@@ -111,6 +111,13 @@ export function InspectionHeaderForm({ inspection }: Props) {
         <h2 className="text-lg font-semibold">Fastighet & uppdrag</h2>
         <span className="text-xs text-muted-foreground">Auto-sparas</span>
       </div>
+      <div className="mb-3">
+        <Field
+          label="Arb.nr"
+          value={form.workOrderNumber}
+          onChange={(e) => set("workOrderNumber", e.target.value)}
+        />
+      </div>
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
         <Field
           label="Fastighetsbeteckning *"
