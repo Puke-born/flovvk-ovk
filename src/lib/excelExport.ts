@@ -11,6 +11,39 @@ const PLACEHOLDER_RE = /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g;
 const SIGNATURE_RE = /^\s*\{\{\s*inspector\.signature\s*\}\}\s*$/;
 const TEMPLATE_SHEET_NAME = "Aggregat";
 
+/**
+ * Convert near-white pixels in a PNG/JPEG data URL to transparent.
+ * Returns a PNG data URL. Falls back to the original on any failure.
+ */
+async function makeWhiteTransparent(dataUrl: string): Promise<string> {
+  try {
+    const img = await new Promise<HTMLImageElement>((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = dataUrl;
+    });
+    const canvas = document.createElement("canvas");
+    canvas.width = img.naturalWidth;
+    canvas.height = img.naturalHeight;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return dataUrl;
+    ctx.drawImage(img, 0, 0);
+    const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const d = imgData.data;
+    for (let i = 0; i < d.length; i += 4) {
+      // Treat near-white as transparent
+      if (d[i] > 240 && d[i + 1] > 240 && d[i + 2] > 240) {
+        d[i + 3] = 0;
+      }
+    }
+    ctx.putImageData(imgData, 0, 0);
+    return canvas.toDataURL("image/png");
+  } catch {
+    return dataUrl;
+  }
+}
+
 function sanitizeSheetName(name: string, fallback: string): string {
   let n = (name || fallback).replace(/[\\/?*\[\]:]/g, " ").trim();
   if (!n) n = fallback;
@@ -47,16 +80,15 @@ function replaceInCell(
     if (sig && sig.startsWith("data:image/")) {
       const m = sig.match(/^data:image\/(\w+);base64,(.+)$/);
       if (m) {
-        const rawExt = m[1].toLowerCase();
-        const ext: "png" | "jpeg" | "gif" =
-          rawExt === "jpg" || rawExt === "jpeg" ? "jpeg" : rawExt === "gif" ? "gif" : "png";
+        // Always force PNG so transparency is preserved
         const base64 = m[2];
-        const imgId = workbook.addImage({ base64, extension: ext });
+        const imgId = workbook.addImage({ base64, extension: "png" });
         const col = Number(cell.col) - 1;
         const row = Number(cell.row) - 1;
+        // Size: width 2.8 cm, height 0.8 cm (96 DPI: 1 cm ≈ 37.7953 px)
         worksheet.addImage(imgId, {
           tl: { col, row } as unknown as ExcelJS.Anchor,
-          br: { col: col + 1, row: row + 1 } as unknown as ExcelJS.Anchor,
+          ext: { width: 2.8 * 37.7953, height: 0.8 * 37.7953 },
           editAs: "oneCell",
         });
         cell.value = null;
@@ -200,6 +232,9 @@ export async function exportInspectionToExcel(inspectionId: string): Promise<voi
   if (!tpl) throw new Error("Ingen Excel-mall är uppladdad. Gå till Inställningar → Excel-mall.");
 
   const data = await buildExportData(inspectionId);
+  if (data.inspectorSignature) {
+    data.inspectorSignature = await makeWhiteTransparent(data.inspectorSignature);
+  }
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(tpl.data);
 
