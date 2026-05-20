@@ -99,10 +99,11 @@ export function SignaturePad({ value, onChange, label = "Signatur" }: Props) {
           Rensa
         </Button>
       </div>
-      <div className="rounded-md border border-input bg-background overflow-hidden">
+      <div className="relative rounded-md border border-input bg-background overflow-hidden">
+        <div className="pointer-events-none absolute left-4 right-4 top-[58%] z-10 border-t border-dashed border-muted-foreground/50" />
         <canvas
           ref={canvasRef}
-          className="block w-full touch-none cursor-crosshair"
+          className="relative z-20 block w-full touch-none cursor-crosshair"
           style={{ height: 140 }}
           onPointerDown={onDown}
           onPointerMove={onMove}
