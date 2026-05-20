@@ -84,11 +84,21 @@ function replaceInCell(
         const base64 = m[2];
         const imgId = workbook.addImage({ base64, extension: "png" });
         const col = Number(cell.col) - 1;
-        const row = Number(cell.row) - 1;
+        const rowIdx = Number(cell.row) - 1;
         // Size: width 2.8 cm, height 0.8 cm (96 DPI: 1 cm ≈ 37.7953 px)
+        const imgWidthPx = 2.8 * 37.7953;
+        const imgHeightPx = 0.8 * 37.7953;
+        // Compute row height in px to anchor image to the bottom of the cell
+        const rowObj = worksheet.getRow(Number(cell.row));
+        const rowHeightPt = rowObj.height ?? 15; // default Excel row height
+        const rowHeightPx = rowHeightPt * (96 / 72);
+        const yOffsetPx = Math.max(0, rowHeightPx - imgHeightPx);
+        // ExcelJS expects fractional row/col where the fraction represents
+        // the offset within the cell. Convert pixel offset to a fraction.
+        const rowFraction = rowHeightPx > 0 ? yOffsetPx / rowHeightPx : 0;
         worksheet.addImage(imgId, {
-          tl: { col, row } as unknown as ExcelJS.Anchor,
-          ext: { width: 2.8 * 37.7953, height: 0.8 * 37.7953 },
+          tl: { col, row: rowIdx + rowFraction } as unknown as ExcelJS.Anchor,
+          ext: { width: imgWidthPx, height: imgHeightPx },
           editAs: "oneCell",
         });
         cell.value = null;
