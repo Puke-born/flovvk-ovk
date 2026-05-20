@@ -226,12 +226,6 @@ export function InspectionHeaderForm({ inspection }: Props) {
           onChange={(e) => set("city", e.target.value)}
           containerClassName="col-span-1 sm:col-span-1"
         />
-        <Field
-          label="Arb.nr"
-          value={form.workOrderNumber}
-          onChange={(e) => set("workOrderNumber", e.target.value)}
-          containerClassName="col-span-2 sm:col-span-2"
-        />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4 pt-4 border-t">
