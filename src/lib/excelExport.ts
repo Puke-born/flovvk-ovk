@@ -199,6 +199,9 @@ export async function exportInspectionToExcel(inspectionId: string): Promise<voi
   if (!tpl) throw new Error("Ingen Excel-mall är uppladdad. Gå till Inställningar → Excel-mall.");
 
   const data = await buildExportData(inspectionId);
+  if (data.inspectorSignature) {
+    data.inspectorSignature = await makeWhiteTransparent(data.inspectorSignature);
+  }
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.load(tpl.data);
 
