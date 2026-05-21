@@ -126,6 +126,8 @@ export interface Unit {
   replacementInterval?: ReplacementInterval;
   verdict?: Verdict; // G / EG
   notes?: string;
+  // Free-form grid for remarks: 30 rows × 13 cols, sparse. Exports to H21:T50.
+  gridCells?: string[][];
 }
 
 export interface ExcelTemplate {

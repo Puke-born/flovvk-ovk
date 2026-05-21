@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Trash2, Copy, X } from "lucide-react";
+import { Plus, Trash2, Copy } from "lucide-react";
 import {
   db,
-  uid,
   addUnit,
   updateUnit,
   duplicateUnit,
@@ -15,10 +14,9 @@ import {
   INSPECTION_INTERVALS,
   type Unit,
 } from "@/lib/db";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Field, TextAreaField } from "@/components/Field";
+import { Field } from "@/components/Field";
 import { SelectField } from "@/components/SelectField";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 import { cn } from "@/lib/utils";
@@ -274,74 +272,12 @@ function UnitEditor({
         />
       </Section>
 
-      <Section title="Tekniska data">
-        <Field label="Märkeffekt" value={form.ratedPower ?? ""} onChange={(e) => set("ratedPower", e.target.value)} />
-        <Field label="Luftmängd" value={form.airflow ?? ""} onChange={(e) => set("airflow", e.target.value)} />
-        
-        {(form.customTechFields ?? []).map((cf, idx) => (
-          <div key={cf.id} className="flex flex-col gap-1.5">
-            <div className="flex items-center gap-1">
-              <Input
-                value={cf.label}
-                placeholder="Rubrik"
-                onChange={(e) => {
-                  const next = [...(form.customTechFields ?? [])];
-                  next[idx] = { ...next[idx], label: e.target.value };
-                  set("customTechFields", next);
-                }}
-                className="h-6 px-1 py-0 text-xs font-semibold uppercase tracking-wide text-muted-foreground border-transparent bg-transparent shadow-none hover:border-input focus-visible:ring-1 focus-visible:ring-offset-0"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="h-6 w-6 shrink-0 text-muted-foreground hover:text-destructive"
-                onClick={() => {
-                  const next = (form.customTechFields ?? []).filter((_, i) => i !== idx);
-                  set("customTechFields", next);
-                }}
-                aria-label="Ta bort fält"
-              >
-                <X className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-            <Input
-              value={cf.value}
-              className="touch-input"
-              onChange={(e) => {
-                const next = [...(form.customTechFields ?? [])];
-                next[idx] = { ...next[idx], value: e.target.value };
-                set("customTechFields", next);
-              }}
-            />
-          </div>
-        ))}
+      <Section title="Anmärkningar">
         <div className="sm:col-span-2 lg:col-span-3">
-          {(() => {
-            const count = (form.customTechFields ?? []).length;
-            const atMax = count >= 5;
-            return (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={atMax}
-                className={atMax ? "bg-muted text-muted-foreground" : undefined}
-                title={atMax ? "Max 5 extra fält" : undefined}
-                onClick={() => {
-                  if (atMax) return;
-                  const next = [
-                    ...(form.customTechFields ?? []),
-                    { id: uid(), label: "", value: "" },
-                  ];
-                  set("customTechFields", next);
-                }}
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Lägg till fält {count > 0 ? `(${count}/5)` : ""}
-              </Button>
-            );
-          })()}
+          <RemarksGrid
+            value={form.gridCells}
+            onChange={(next) => set("gridCells", next)}
+          />
         </div>
       </Section>
 
@@ -365,14 +301,69 @@ function UnitEditor({
           onValueChange={(v) => set("verdict", v as Unit["verdict"])}
           options={["G", "EG"]}
         />
-        <TextAreaField
-          label="Anteckningar / övriga anmärkningar"
-          value={form.notes ?? ""}
-          onChange={(e) => set("notes", e.target.value)}
-          containerClassName="sm:col-span-2"
-        />
       </Section>
     </Card>
+  );
+}
+
+const GRID_ROWS = 30;
+const GRID_COLS = 13;
+
+function RemarksGrid({
+  value,
+  onChange,
+}: {
+  value: string[][] | undefined;
+  onChange: (next: string[][]) => void;
+}) {
+  const getCell = (r: number, c: number) => value?.[r]?.[c] ?? "";
+  const setCell = (r: number, c: number, v: string) => {
+    const next: string[][] = (value ?? []).map((row) => [...(row ?? [])]);
+    while (next.length <= r) next.push([]);
+    const row = [...(next[r] ?? [])];
+    while (row.length <= c) row.push("");
+    row[c] = v;
+    next[r] = row;
+    onChange(next);
+  };
+
+  return (
+    <div className="overflow-auto border border-border rounded-md max-h-[60vh]">
+      <table className="border-collapse text-sm">
+        <thead className="sticky top-0 z-10 bg-muted">
+          <tr>
+            <th className="sticky left-0 z-20 bg-muted border border-border w-10 h-8 text-xs font-semibold text-muted-foreground"></th>
+            {Array.from({ length: GRID_COLS }, (_, c) => (
+              <th
+                key={c}
+                className="border border-border w-28 h-8 text-xs font-semibold text-muted-foreground"
+              >
+                {c + 1}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {Array.from({ length: GRID_ROWS }, (_, r) => (
+            <tr key={r}>
+              <th className="sticky left-0 z-10 bg-muted border border-border w-10 h-8 text-xs font-semibold text-muted-foreground text-center">
+                {r + 1}
+              </th>
+              {Array.from({ length: GRID_COLS }, (_, c) => (
+                <td key={c} className="border border-border p-0">
+                  <input
+                    type="text"
+                    value={getCell(r, c)}
+                    onChange={(e) => setCell(r, c, e.target.value)}
+                    className="w-28 h-8 px-2 bg-transparent outline-none focus:bg-accent/40 text-sm"
+                  />
+                </td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
   );
 }
 

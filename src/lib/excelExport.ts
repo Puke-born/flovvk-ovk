@@ -237,11 +237,34 @@ export async function scanTemplate(buffer: ArrayBuffer): Promise<{
   };
 }
 
+/**
+ * Write a unit's free-form remarks grid (30 rows × 13 cols) into cells H21:T50.
+ * Empty cells are skipped so template formatting is preserved.
+ */
+function writeUnitGrid(worksheet: ExcelJS.Worksheet, grid: string[][] | undefined): void {
+  if (!grid) return;
+  const ROW_START = 21;
+  const COL_START = 8; // H
+  const MAX_ROWS = 30;
+  const MAX_COLS = 13;
+  for (let r = 0; r < Math.min(grid.length, MAX_ROWS); r++) {
+    const row = grid[r];
+    if (!row) continue;
+    for (let c = 0; c < Math.min(row.length, MAX_COLS); c++) {
+      const v = row[c];
+      if (v === undefined || v === null || v === "") continue;
+      worksheet.getCell(ROW_START + r, COL_START + c).value = v;
+    }
+  }
+}
+
 export async function exportInspectionToExcel(inspectionId: string): Promise<void> {
   const tpl = await db.excelTemplate.get("template");
   if (!tpl) throw new Error("Ingen Excel-mall är uppladdad. Gå till Inställningar → Excel-mall.");
 
   const data = await buildExportData(inspectionId);
+  // Load raw units for data not exposed via placeholders (e.g. gridCells)
+  const rawUnits = await db.units.where("inspectionId").equals(inspectionId).sortBy("order");
   if (data.inspectorSignature) {
     data.inspectorSignature = await makeWhiteTransparent(data.inspectorSignature);
   }
@@ -276,6 +299,7 @@ export async function exportInspectionToExcel(inspectionId: string): Promise<voi
       const newId = (newSheet as any).id;
       newSheet.model = { ...model, id: newId, name };
       processSheet(newSheet, data, unit, wb);
+      writeUnitGrid(newSheet, rawUnits[i]?.gridCells);
     });
 
     // Move duplicated sheets to where the template was, then remove the template
