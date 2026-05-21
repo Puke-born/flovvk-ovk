@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Trash2, Copy, X } from "lucide-react";
+import { Plus, Trash2, Copy } from "lucide-react";
 import {
   db,
-  uid,
   addUnit,
   updateUnit,
   duplicateUnit,
@@ -15,10 +14,9 @@ import {
   INSPECTION_INTERVALS,
   type Unit,
 } from "@/lib/db";
-import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Field, TextAreaField } from "@/components/Field";
+import { Field } from "@/components/Field";
 import { SelectField } from "@/components/SelectField";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 import { cn } from "@/lib/utils";
