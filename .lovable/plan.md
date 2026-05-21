@@ -1,80 +1,74 @@
 ## Mål
 
-Möjliggöra export av besiktningsdata till en Excel-mall som du själv laddar upp i Inställningar. Mallen använder platshållare som `{{propertyDesignation}}` i cellerna. Vid export ersätts platshållarna med data, och för varje aggregat duplicerats en mallflik.
+Ersätta sektionerna **Tekniska data** och **Anteckningar / övriga anmärkningar** på varje aggregat med ett fritt **13×30 rutnät** (kolumner × rader). Vid Excel-export skrivs rutnätet rakt in i cellerna **H21:T50** på aggregatets flik.
 
-## Användarflöde
+## Vad användaren ser
 
-**1. Engångs-setup (Inställningar → ny flik "Excel-mall"):**
-- Du laddar upp din .xlsx-mall.
-- Appen läser in den och visar: filnamn, antal flikar, och en lista över alla platshållare den hittade (`{{...}}`).
-- Du ser också en "Tillgängliga fält"-lista att kopiera från när du designar mallen.
-- Mallen sparas lokalt (IndexedDB) — fungerar offline efter uppladdning.
+I aggregatkortet, mellan **Besiktning** och **Bedömning**, en ny sektion **"Anmärkningar"** med ett rutnät:
 
-**2. Mall-design (gör du i Excel):**
-- I cellerna där fastighetsdata ska, skriv `{{propertyDesignation}}`, `{{address}}`, `{{inspectorName}}` osv.
-- Skapa **en flik som heter exakt `Aggregat`** (eller annat namn vi bestämmer). Den används som mall för varje aggregat och duplicerats vid export. I den fliken använder du `{{unit.systemDesignation}}`, `{{unit.status}}` osv. (utan index — appen fyller i per kopia).
-- Övriga flikar (intyg, sammanställning) använder fält på besiktningsnivå.
+```text
+       1   2   3   4   5   6   7   8   9  10  11  12  13
+   1 [ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
+   2 [ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
+   ...
+  30 [ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
+```
 
-**3. Export (i besiktningsvyn):**
-- Knapp "Exportera till Excel" i headern.
-- Appen:
-  1. Laddar mallen från IndexedDB.
-  2. För varje aggregat: duplicerar `Aggregat`-fliken, döper den t.ex. till aggregatets systembeteckning, fyller i `{{unit.*}}`-platshållare.
-  3. Tar bort original-`Aggregat`-fliken.
-  4. Ersätter `{{...}}` på alla övriga flikar med besiktningsdata.
-  5. Laddar ner ifylld fil som `<fastighetsbeteckning>_<datum>.xlsx`.
-- Allt sker i webbläsaren — offline OK.
+- Varje cell är ett vanligt textinput-fält (en rad text).
+- Kolumnnumren 1–13 motsvarar Excel-kolumnerna H–T.
+- Radnumren 1–30 motsvarar Excel-rad 21–50.
+- Sparas debouncat på samma sätt som resten av formuläret.
+- Mobil: horisontell scroll inuti rutnätet, första kolumnen (radnummer) sticky.
 
-## Tillgängliga platshållare (preliminärt)
+Borttaget:
+- Hela sektionen **Tekniska data** (Märkeffekt, Luftmängd, "Lägg till fält"-funktionen).
+- Fältet **Anteckningar / övriga anmärkningar** under Bedömning.
 
-**Besiktning/fastighet:**
-`{{propertyDesignation}}`, `{{buildingYear}}`, `{{renovationYear}}`, `{{address}}`, `{{postalCode}}`, `{{city}}`, `{{buildingId}}`, `{{buildingNorm}}`
+## Excel-export
 
-**Fastighetsägare / driftansvarig (kopplade kontakter):**
-`{{owner.name}}`, `{{owner.contactPerson}}`, `{{owner.address}}`, `{{owner.phone}}`, `{{owner.email}}` osv.
-`{{ops.name}}`, `{{ops.contactPerson}}` osv.
+Vid duplicering av `Aggregat`-fliken fylls rutnätet in direkt efter platshållar­ersättningen:
 
-**Besiktningsman:**
-`{{inspector.name}}`, `{{inspector.authorization}}`, `{{inspector.certificationNumber}}`, `{{inspector.company}}`, `{{inspector.phone}}`, `{{inspector.email}}` — plus `{{inspector.signature}}` som infogas som **bild** i cellen om den finns.
+- `gridCells[row][col]` → cellen på rad `21 + row`, kolumn `H..T` (offset `col` 0–12).
+- Tomma celler hoppas över (befintligt cellinnehåll/formatering i mallen lämnas orört om appens cell är tom). Icke-tomma celler skrivs som strängvärde.
+- Befintlig cellformatering i mallen (kantlinjer, font etc.) bevaras eftersom vi bara sätter `cell.value`.
 
-**Aggregat (på `Aggregat`-fliken som dupliceras):**
-`{{unit.systemDesignation}}`, `{{unit.placement}}`, `{{unit.aggregate}}`, `{{unit.ventilationType}}`, `{{unit.servedArea}}`, `{{unit.business}}`, `{{unit.operatingHours}}`, `{{unit.inspectionInterval}}`, `{{unit.apartmentCount}}`, `{{unit.inspectionType}}`, `{{unit.inspectionDate}}`, `{{unit.reInspectionDate}}`, `{{unit.nextOrdinaryDate}}`, `{{unit.previousInspectionDate}}`, `{{unit.ratedPower}}`, `{{unit.airflow}}`, `{{unit.qNozzle}}`, `{{unit.status}}`, `{{unit.replacementInterval}}`, `{{unit.verdict}}`, `{{unit.notes}}`
+Inga nya platshållare behövs — `H21:T50` är reserverat område i mallen.
 
-**Praktiskt:** `{{exportDate}}`, `{{unit.index}}` (1, 2, 3…), `{{unit.total}}`.
+## Teknisk implementation
 
-Du får exakt fält-listan i Inställningar — kopiera fritt.
+**Datamodell (`src/lib/db.ts`):**
+- Lägg till `gridCells?: string[][]` på `Unit` (30 rader × 13 kolumner, sparse — tomma rader/celler får vara `undefined`).
+- Behåll `ratedPower`, `airflow`, `qNozzle`, `customTechFields`, `notes` i typen för bakåtkompatibilitet (gammal data går inte förlorad) men de används inte längre i UI eller export.
+- Ingen schemaversion-bump behövs (inga nya index).
 
-## Tekniska detaljer
+**UI (`src/sections/UnitsSection.tsx`):**
+- Ta bort `<Section title="Tekniska data">…</Section>` (rader 277–346).
+- Ta bort `<TextAreaField label="Anteckningar / övriga anmärkningar" …>` (rader 368–373).
+- Lägg in ny `<Section title="Anmärkningar">` med en specialiserad `GridField`-komponent (lokal, samma fil eller egen liten komponent).
+- `GridField` renderar en `<table>` med 30 rader × 13 textinputs. Stil: kompakt, monospace ej nödvändigt, `h-8`/`text-sm`, kantlinjer från `border-border`.
+- Onchange uppdaterar `form.gridCells` (kopiera, fyll i, sätt). Sparas via befintlig `useDebouncedEffect` som redan flushar hela `form`.
 
-- **Bibliotek:** [`exceljs`](https://www.npmjs.com/package/exceljs) (klient-sida, bevarar formatering, formler, bilder, sammanfogade celler — bättre än SheetJS gratisversion för detta).
-- **Lagring av mall:** Ny Dexie-tabell `excelTemplate` (single record) — sparar filnamn, uppladdningsdatum och själva filen som `Blob`/`ArrayBuffer`.
-- **Platshållar-ersättning:** Loopa alla celler i alla flikar; om cell-värdet är en sträng som innehåller `{{...}}`, ersätt. Behåll cellens formatering (font, färg, kantlinjer).
-- **Flik-duplicering:** `worksheet.model` kopieras, ny flik skapas med kopian, `{{unit.*}}` ersätts med det aggregatets data. Fliknamn = aggregatets `systemDesignation` (saneras för Excel-regler: max 31 tecken, inga `\ / ? * [ ]`).
-- **Signatur som bild:** Om en cell innehåller bara `{{inspector.signature}}` och vi har en data-URL, infoga som bild i den cellen istället för text. (Annars hoppas över.)
-- **Inga ändringar på Lovable Cloud / inloggning** — det tar vi separat senare som planerat.
+**Export (`src/lib/excelExport.ts`):**
+- I `processSheet` (eller en efterföljande funktion som körs per duplicerad aggregat-flik), efter `replaceInCell`-loopen, anropa en ny `writeUnitGrid(worksheet, unit)`.
+- `writeUnitGrid` itererar `gridCells`: för varje icke-tom sträng, `worksheet.getCell(rowIdx, colIdx).value = value` där `rowIdx = 21 + r` och `colIdx = 8 + c` (H = kolumn 8).
+- Måste skickas via `processSheet` så vi har tillgång till `unit`. Den körs redan per aggregat i exportloopen.
 
-## Påverkade filer
+**Placeholder-listan (`src/lib/excelPlaceholders.ts`):**
+- `UnitData` behöver inte ändras (rutnätet exporteras inte via platshållare).
+- `unitFields` slutar mappa `notes`/`ratedPower`/`airflow`/`qNozzle` är OK att behålla — de skadar inget. Vi gör inga ändringar här i denna omgång.
 
-- `src/lib/db.ts` — ny `excelTemplate`-tabell, version-bump till 4.
-- `src/lib/excelExport.ts` — ny: laddar mall, ersätter platshållare, duplicerar aggregat-flik, triggar nedladdning.
-- `src/lib/excelPlaceholders.ts` — ny: bygger objektet `{ propertyDesignation, owner: {...}, units: [...] }` från en besiktning + listan över tillgängliga fältnamn (för UI).
-- `src/pages/SettingsPage.tsx` — ny flik "Excel-mall" med uppladdning, status, fält-referens, ta bort-knapp.
-- `src/components/ExcelTemplateManager.tsx` — ny: UI för uppladdning + lista med funna platshållare + tillgängliga fält.
-- `src/pages/InspectionPage.tsx` — lägg tillbaka en "Exportera"-knapp i headern (bara aktiv om mall finns uppladdad).
-- `package.json` — lägg till `exceljs`.
+**ExcelTemplateManager / Settings:**
+- Lägg till en kort notis i hjälp-rutan: *"Rutnätet för anmärkningar skrivs automatiskt till cellerna H21:T50 på varje aggregat-flik. Lämna det området tomt i mallen (formatera gärna med kantlinjer)."*
 
-## Begränsningar att vara medveten om
+## Filer som ändras
 
-- **Aggregat-fliken måste heta exakt det avtalade namnet** (förslag: `Aggregat`). Annars vet appen inte vilken som ska dupliceras.
-- **Komplexa Excel-funktioner** (pivottabeller, vissa diagram, makron) bevaras vanligtvis av exceljs men inte garanterat 100%. Om du har sånt i mallen testar vi och justerar.
-- **Bilder/loggor som redan finns i mallen** bevaras.
-- **Formler i mallen** bevaras och räknar om sig när Excel öppnar filen.
+- `src/lib/db.ts` — lägg till `gridCells?: string[][]` på `Unit`.
+- `src/sections/UnitsSection.tsx` — ta bort Tekniska data + Anteckningar, lägg in `GridField`.
+- `src/lib/excelExport.ts` — skriv `gridCells` till H21:T50 per duplicerad aggregat-flik.
+- `src/components/ExcelTemplateManager.tsx` — uppdatera hjälptext (litet tillägg).
 
-## Vad vi gör efter godkännande
+## Att vara medveten om
 
-1. Lägger till `exceljs` och databas-tabellen.
-2. Bygger Inställningar → Excel-mall (uppladdning + visning av funna platshållare).
-3. Bygger export-funktionen och knappen i besiktningsvyn.
-4. Du laddar upp din mall → vi testar tillsammans → justerar.
-
-Säg till om något ska ändras (t.ex. annat namn än `Aggregat` på mall-fliken, eller fler/färre platshållarfält), annars kör vi.
+- **Ingen migration av gammal data**: tidigare ifyllda `notes`/`ratedPower`/`airflow`/customTechFields finns kvar i databasen men visas inte. Om du vill att de ska migreras in i rutnätet (t.ex. notes → cell H21) säg till — annars lämnar vi dem orörda.
+- **Mallens H21:T50 ska vara tomt** i din Excel-mall (men gärna formaterat med kantlinjer för snyggt utseende — formateringen bevaras).
+- **Prestanda**: 390 inputs per aggregat är hanterbart men inte gratis. Vi använder okontrollerade uppdateringar via lokal `form`-state precis som idag, så det ska gå smidigt.
