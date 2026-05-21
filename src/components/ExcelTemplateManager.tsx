@@ -71,6 +71,8 @@ export function ExcelTemplateManager() {
         cellerna där datan ska hamna. Skapa en flik med exakt namnet{" "}
         <strong>{TEMPLATE_AGGREGATE_SHEET_NAME}</strong> — den dupliceras till en flik per
         aggregat vid export. På den fliken används <code className="text-xs bg-muted px-1 rounded">{`{{unit.*}}`}</code>-platshållare.
+        Rutnätet för anmärkningar skrivs automatiskt till cellerna <strong>H21:T50</strong> på
+        varje aggregat-flik — lämna det området tomt i mallen (formatera gärna med kantlinjer).
       </p>
 
       <input
