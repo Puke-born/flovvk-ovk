@@ -321,6 +321,25 @@ function RemarksGrid({
   onChange: (next: string[][]) => void;
 }) {
   const getCell = (r: number, c: number) => value?.[r]?.[c] ?? "";
+
+  useEffect(() => {
+    const defaults: Array<[number, number, string]> = [
+      [0, 1, "Märkeffekt:"],
+      [2, 1, "Luftmängd:"],
+    ];
+    const needs = defaults.filter(([r, c]) => !(value?.[r]?.[c]));
+    if (needs.length === 0) return;
+    const next: string[][] = (value ?? []).map((row) => [...(row ?? [])]);
+    for (const [r, c, v] of needs) {
+      while (next.length <= r) next.push([]);
+      const row = [...(next[r] ?? [])];
+      while (row.length <= c) row.push("");
+      row[c] = v;
+      next[r] = row;
+    }
+    onChange(next);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const setCell = (r: number, c: number, v: string) => {
     const next: string[][] = (value ?? []).map((row) => [...(row ?? [])]);
     while (next.length <= r) next.push([]);
