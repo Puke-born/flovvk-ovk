@@ -377,24 +377,39 @@ function RemarksGrid({
                 const showBottom = r % 2 === 1;
                 const showLeft = !inMerge || c === 1;
                 const showRight = !inMerge || c === 11;
+                const val = getCell(r, c);
                 return (
                   <td
                     key={c}
-                    className="p-0"
+                    className="p-0 relative [&:focus-within]:z-30"
                     style={{
                       borderTop: showTop ? line : none,
                       borderBottom: showBottom ? line : none,
                       borderLeft: showLeft ? line : none,
                       borderRight: showRight ? line : none,
                       height: ROW_HEIGHT,
+                      overflow: "visible",
                     }}
                   >
+                    {/* Overlay-text som får flöda över tomma grannceller */}
+                    <div
+                      aria-hidden
+                      className="absolute top-0 left-0 px-1 text-xs leading-none whitespace-nowrap pointer-events-none"
+                      style={{
+                        height: ROW_HEIGHT,
+                        lineHeight: `${ROW_HEIGHT}px`,
+                        width: "max-content",
+                        zIndex: 1,
+                      }}
+                    >
+                      {val}
+                    </div>
                     <input
                       type="text"
-                      value={getCell(r, c)}
+                      value={val}
                       onChange={(e) => setCell(r, c, e.target.value)}
-                      className="block w-full bg-transparent px-1 text-xs leading-none focus:bg-accent/40 focus:outline-none"
-                      style={{ height: ROW_HEIGHT - 2, border: 0 }}
+                      className="absolute inset-0 w-full px-1 text-xs leading-none bg-transparent text-transparent caret-foreground focus:bg-background focus:text-foreground focus:z-20 focus:outline-none focus:ring-1 focus:ring-primary"
+                      style={{ border: 0 }}
                     />
                   </td>
                 );

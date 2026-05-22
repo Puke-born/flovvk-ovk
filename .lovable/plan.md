@@ -1,22 +1,37 @@
 ## Mål
 
-Få kantlinjerna i rutnätet att matcha Excel-bilden: kolumnerna I–S grupperas parvis vertikalt (rad 21+22, 23+24, …, 49+50) som "sammanslagna" block utan inre kantlinjer. Kolumn H, T och rubrik-/radnummerkolumnerna behåller alla sina linjer för tillfället, men för att efterlika målbilden ska även sträcken mellan 21+22, osv bort även i H och T.
+Få text i en cell att flöda över intilliggande tomma celler (Excel-beteende). Idag klipps texten av eftersom `<input>` alltid klipper sitt innehåll vid sin egen bredd och täcks av nästa cell.
 
-## Regler per cell (rad r = 0..29, kol c = 0..12 där 0=H, 12=T)
+## Lösning
 
-Block = rader I–S (c ∈ 1..11) parade som (0,1), (2,3), …, (28,29).
+I `RemarksGrid` (src/sections/UnitsSection.tsx), byt ut nuvarande `<input>`-rendering mot en cell-wrapper som innehåller två lager:
 
-Inom ett block, behåll bara den yttre ramen:
+1. **Overflow-overlay** (visas när cellen INTE är fokuserad):
+   - `<div>` absolut-positionerad ovanpå cellen.
+   - `white-space: nowrap`, `overflow: visible`, `pointer-events: none`.
+   - Bredd: `width: max-content` (eller `width: auto`) så texten får sin naturliga längd.
+   - `z-index` högre än grannceller men lägre än fokuserad input.
+   - Visar `getCell(r, c)`.
 
-- **Topp**: visa om `r % 2 === 0` (övre raden i paret) eller om c utanför 1..11.
-- **Botten**: visa om `r % 2 === 1` (nedre raden i paret) eller om c utanför 1..11.
-- **Vänster**: visa om `c === 1` (vänsterkant av I-blocket) eller om c utanför 1..11. Dvs alla vertikala linjer mellan I–S inuti blocket göms.
-- **Höger**: visa om `c === 11` (högerkant av S-blocket) eller om c utanför 1..11.
+2. **Input-lager** (alltid i DOM för tab/typing):
+   - `<input>` med `position: absolute; inset: 0`.
+   - `background: transparent`, `color: transparent` när inte fokuserad (för att inte dubbel-rita text), `color: inherit` på `:focus`.
+   - På `:focus` får inputen `z-index` högst och `background: hsl(var(--background))` så man ser vad man skriver utan att grannceller stör.
+   - Vid focus får cellen även förhöjt z-index så omkringliggande inte täcker.
 
-Kolumn H (c=0) och T (c=12) behåller alla fyra kanter som idag förtillfället. Rubrikraden och radnummerkolumnen oförändrade (alla linjer kvar).
+Cell-`<td>` får `position: relative` och `overflow: visible`. Tabellens `overflow: visible` redan ok (containern har `overflow: auto`).
 
-Implementeras genom att sätta individuella `borderTop/Right/Bottom/Left: "1px solid black"` per `<td>` istället för shorthand `border`. Ingen ändring i export, datamodell eller proportioner.
+För att grannceller inte ska täcka overlay-texten: ge varje `<td>` `background` endast vid fokus. Tomma celler har `background: transparent` (vilket de redan har) så overflow-texten syns igenom dem.
+
+## Detaljer
+
+- Lägg till lokalt `focusedCell` state `{r,c} | null` i `RemarksGrid` för att kunna sätta z-index/bg vid fokus.
+- Alt: använd CSS `:focus-within` på `<td>` istället för React-state — enklare, ingen rerender.
+- Overlay text använder samma typografi som input (`text-xs`, samma padding `px-1`, samma höjd) så inget visuellt hopp vid focus/blur.
+- Border-logiken är oförändrad.
 
 ## Filer
 
-- `src/sections/UnitsSection.tsx` — uppdatera `RemarksGrid` cell-rendering med per-sida border-logik enligt ovan.
+- `src/sections/UnitsSection.tsx` — uppdatera cell-rendering i `RemarksGrid`.
+
+Inga ändringar i datamodell eller export.
