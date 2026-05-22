@@ -1,74 +1,42 @@
 ## Mål
 
-Ersätta sektionerna **Tekniska data** och **Anteckningar / övriga anmärkningar** på varje aggregat med ett fritt **13×30 rutnät** (kolumner × rader). Vid Excel-export skrivs rutnätet rakt in i cellerna **H21:T50** på aggregatets flik.
+Få rutnätet i UnitsSection att visuellt matcha Excel-mallen (H–T, rad 21–50) med korrekta kolumnbredder, radhöjd och svarta kantlinjer.
 
-## Vad användaren ser
+## Mått från Excel → CSS
 
-I aggregatkortet, mellan **Besiktning** och **Bedömning**, en ny sektion **"Anmärkningar"** med ett rutnät:
+Excel-kolumnbredd `w` ≈ `w*7 + 5` px (default-font). Radhöjd 12,75 pt ≈ 17 px.
 
-```text
-       1   2   3   4   5   6   7   8   9  10  11  12  13
-   1 [ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
-   2 [ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
-   ...
-  30 [ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ][ ]
-```
+| Col | Excel w | px |
+|-----|--------:|---:|
+| H | 3,43 | 29 |
+| I | 9,43 | 71 |
+| J | 8,43 | 64 |
+| K | 8,43 | 64 |
+| L | 3,00 | 26 |
+| M | 2,57 | 23 |
+| N | 1,00 | 12 |
+| O | 1,43 | 15 |
+| P | 1,14 | 13 |
+| Q | 3,71 | 31 |
+| R | 2,14 | 20 |
+| S | 2,86 | 25 |
+| T | 3,14 | 27 |
 
-- Varje cell är ett vanligt textinput-fält (en rad text).
-- Kolumnnumren 1–13 motsvarar Excel-kolumnerna H–T.
-- Radnumren 1–30 motsvarar Excel-rad 21–50.
-- Sparas debouncat på samma sätt som resten av formuläret.
-- Mobil: horisontell scroll inuti rutnätet, första kolumnen (radnummer) sticky.
+Total bredd ≈ 420 px + radnummer-kolumn (~32 px) ≈ 452 px.
+Radhöjd: 17 px (alla 30 rader).
 
-Borttaget:
-- Hela sektionen **Tekniska data** (Märkeffekt, Luftmängd, "Lägg till fält"-funktionen).
-- Fältet **Anteckningar / övriga anmärkningar** under Bedömning.
+## Visuella ändringar (`src/sections/UnitsSection.tsx` – `RemarksGrid`)
 
-## Excel-export
-
-Vid duplicering av `Aggregat`-fliken fylls rutnätet in direkt efter platshållar­ersättningen:
-
-- `gridCells[row][col]` → cellen på rad `21 + row`, kolumn `H..T` (offset `col` 0–12).
-- Tomma celler hoppas över (befintligt cellinnehåll/formatering i mallen lämnas orört om appens cell är tom). Icke-tomma celler skrivs som strängvärde.
-- Befintlig cellformatering i mallen (kantlinjer, font etc.) bevaras eftersom vi bara sätter `cell.value`.
-
-Inga nya platshållare behövs — `H21:T50` är reserverat område i mallen.
-
-## Teknisk implementation
-
-**Datamodell (`src/lib/db.ts`):**
-- Lägg till `gridCells?: string[][]` på `Unit` (30 rader × 13 kolumner, sparse — tomma rader/celler får vara `undefined`).
-- Behåll `ratedPower`, `airflow`, `qNozzle`, `customTechFields`, `notes` i typen för bakåtkompatibilitet (gammal data går inte förlorad) men de används inte längre i UI eller export.
-- Ingen schemaversion-bump behövs (inga nya index).
-
-**UI (`src/sections/UnitsSection.tsx`):**
-- Ta bort `<Section title="Tekniska data">…</Section>` (rader 277–346).
-- Ta bort `<TextAreaField label="Anteckningar / övriga anmärkningar" …>` (rader 368–373).
-- Lägg in ny `<Section title="Anmärkningar">` med en specialiserad `GridField`-komponent (lokal, samma fil eller egen liten komponent).
-- `GridField` renderar en `<table>` med 30 rader × 13 textinputs. Stil: kompakt, monospace ej nödvändigt, `h-8`/`text-sm`, kantlinjer från `border-border`.
-- Onchange uppdaterar `form.gridCells` (kopiera, fyll i, sätt). Sparas via befintlig `useDebouncedEffect` som redan flushar hela `form`.
-
-**Export (`src/lib/excelExport.ts`):**
-- I `processSheet` (eller en efterföljande funktion som körs per duplicerad aggregat-flik), efter `replaceInCell`-loopen, anropa en ny `writeUnitGrid(worksheet, unit)`.
-- `writeUnitGrid` itererar `gridCells`: för varje icke-tom sträng, `worksheet.getCell(rowIdx, colIdx).value = value` där `rowIdx = 21 + r` och `colIdx = 8 + c` (H = kolumn 8).
-- Måste skickas via `processSheet` så vi har tillgång till `unit`. Den körs redan per aggregat i exportloopen.
-
-**Placeholder-listan (`src/lib/excelPlaceholders.ts`):**
-- `UnitData` behöver inte ändras (rutnätet exporteras inte via platshållare).
-- `unitFields` slutar mappa `notes`/`ratedPower`/`airflow`/`qNozzle` är OK att behålla — de skadar inget. Vi gör inga ändringar här i denna omgång.
-
-**ExcelTemplateManager / Settings:**
-- Lägg till en kort notis i hjälp-rutan: *"Rutnätet för anmärkningar skrivs automatiskt till cellerna H21:T50 på varje aggregat-flik. Lämna det området tomt i mallen (formatera gärna med kantlinjer)."*
+- Byt ut nuvarande `<table>` med jämna kolumner mot `<table style={{ tableLayout: 'fixed', borderCollapse: 'collapse' }}>` och en `<colgroup>` med en `<col>` per kolumn där `width` sätts i px enligt tabellen ovan. Första kolumnen är radnummer (32 px).
+- Rubrikrad visar `H I J K L M N O P Q R S T` (Excel-bokstäver istället för 1–13) för att matcha Excel-fönstret på bilden. Bakgrund `bg-muted`, font `text-xs`, centrerad.
+- Radnummer-kolumn visar `21`–`50` (Excel-radnummer), sticky vänster, `bg-muted`, `text-xs`, höger-justerad med liten padding.
+- Varje cell: höjd 17 px (`h-[17px]`), `p-0`. Inputen inuti: `h-full w-full border-0 bg-transparent px-1 text-xs leading-none focus:outline-none focus:ring-1 focus:ring-ring`.
+- **Svarta kantlinjer**: alla `<td>`/`<th>` får `border border-black` (1 px). `borderCollapse: collapse` gör att linjerna inte dubblas. Använd direkt `border-black` (inte semantic token) eftersom det är en visuell Excel-replika och ska se identisk ut i light/dark.
+- Wrappern runt tabellen får `overflow-x-auto` så mobil fungerar, samt `inline-block` så tabellen inte sträcks ut.
+- Inga ändringar i datamodell, debouncing, eller export — bara CSS/markup i `RemarksGrid`.
 
 ## Filer som ändras
 
-- `src/lib/db.ts` — lägg till `gridCells?: string[][]` på `Unit`.
-- `src/sections/UnitsSection.tsx` — ta bort Tekniska data + Anteckningar, lägg in `GridField`.
-- `src/lib/excelExport.ts` — skriv `gridCells` till H21:T50 per duplicerad aggregat-flik.
-- `src/components/ExcelTemplateManager.tsx` — uppdatera hjälptext (litet tillägg).
+- `src/sections/UnitsSection.tsx` — uppdatera `RemarksGrid`-komponenten enligt ovan.
 
-## Att vara medveten om
-
-- **Ingen migration av gammal data**: tidigare ifyllda `notes`/`ratedPower`/`airflow`/customTechFields finns kvar i databasen men visas inte. Om du vill att de ska migreras in i rutnätet (t.ex. notes → cell H21) säg till — annars lämnar vi dem orörda.
-- **Mallens H21:T50 ska vara tomt** i din Excel-mall (men gärna formaterat med kantlinjer för snyggt utseende — formateringen bevaras).
-- **Prestanda**: 390 inputs per aggregat är hanterbart men inte gratis. Vi använder okontrollerade uppdateringar via lokal `form`-state precis som idag, så det ska gå smidigt.
+Inga ändringar i `excelExport.ts`, `db.ts` eller mallen.
