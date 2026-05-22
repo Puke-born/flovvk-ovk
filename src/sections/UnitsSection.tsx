@@ -369,21 +369,36 @@ function RemarksGrid({
               >
                 {r + 21}
               </th>
-              {Array.from({ length: GRID_COLS }, (_, c) => (
-                <td
-                  key={c}
-                  className="p-0"
-                  style={{ border: "1px solid black", height: ROW_HEIGHT }}
-                >
-                  <input
-                    type="text"
-                    value={getCell(r, c)}
-                    onChange={(e) => setCell(r, c, e.target.value)}
-                    className="block w-full bg-transparent px-1 text-xs leading-none focus:bg-accent/40 focus:outline-none"
-                    style={{ height: ROW_HEIGHT - 2, border: 0 }}
-                  />
-                </td>
-              ))}
+              {Array.from({ length: GRID_COLS }, (_, c) => {
+                const line = "1px solid black";
+                const none = "1px solid transparent";
+                const inMerge = c >= 1 && c <= 11;
+                const showTop = r % 2 === 0;
+                const showBottom = r % 2 === 1;
+                const showLeft = !inMerge || c === 1;
+                const showRight = !inMerge || c === 11;
+                return (
+                  <td
+                    key={c}
+                    className="p-0"
+                    style={{
+                      borderTop: showTop ? line : none,
+                      borderBottom: showBottom ? line : none,
+                      borderLeft: showLeft ? line : none,
+                      borderRight: showRight ? line : none,
+                      height: ROW_HEIGHT,
+                    }}
+                  >
+                    <input
+                      type="text"
+                      value={getCell(r, c)}
+                      onChange={(e) => setCell(r, c, e.target.value)}
+                      className="block w-full bg-transparent px-1 text-xs leading-none focus:bg-accent/40 focus:outline-none"
+                      style={{ height: ROW_HEIGHT - 2, border: 0 }}
+                    />
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>

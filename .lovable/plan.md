@@ -1,42 +1,22 @@
 ## Mål
 
-Få rutnätet i UnitsSection att visuellt matcha Excel-mallen (H–T, rad 21–50) med korrekta kolumnbredder, radhöjd och svarta kantlinjer.
+Få kantlinjerna i rutnätet att matcha Excel-bilden: kolumnerna I–S grupperas parvis vertikalt (rad 21+22, 23+24, …, 49+50) som "sammanslagna" block utan inre kantlinjer. Kolumn H, T och rubrik-/radnummerkolumnerna behåller alla sina linjer för tillfället, men för att efterlika målbilden ska även sträcken mellan 21+22, osv bort även i H och T.
 
-## Mått från Excel → CSS
+## Regler per cell (rad r = 0..29, kol c = 0..12 där 0=H, 12=T)
 
-Excel-kolumnbredd `w` ≈ `w*7 + 5` px (default-font). Radhöjd 12,75 pt ≈ 17 px.
+Block = rader I–S (c ∈ 1..11) parade som (0,1), (2,3), …, (28,29).
 
-| Col | Excel w | px |
-|-----|--------:|---:|
-| H | 3,43 | 29 |
-| I | 9,43 | 71 |
-| J | 8,43 | 64 |
-| K | 8,43 | 64 |
-| L | 3,00 | 26 |
-| M | 2,57 | 23 |
-| N | 1,00 | 12 |
-| O | 1,43 | 15 |
-| P | 1,14 | 13 |
-| Q | 3,71 | 31 |
-| R | 2,14 | 20 |
-| S | 2,86 | 25 |
-| T | 3,14 | 27 |
+Inom ett block, behåll bara den yttre ramen:
 
-Total bredd ≈ 420 px + radnummer-kolumn (~32 px) ≈ 452 px.
-Radhöjd: 17 px (alla 30 rader).
+- **Topp**: visa om `r % 2 === 0` (övre raden i paret) eller om c utanför 1..11.
+- **Botten**: visa om `r % 2 === 1` (nedre raden i paret) eller om c utanför 1..11.
+- **Vänster**: visa om `c === 1` (vänsterkant av I-blocket) eller om c utanför 1..11. Dvs alla vertikala linjer mellan I–S inuti blocket göms.
+- **Höger**: visa om `c === 11` (högerkant av S-blocket) eller om c utanför 1..11.
 
-## Visuella ändringar (`src/sections/UnitsSection.tsx` – `RemarksGrid`)
+Kolumn H (c=0) och T (c=12) behåller alla fyra kanter som idag förtillfället. Rubrikraden och radnummerkolumnen oförändrade (alla linjer kvar).
 
-- Byt ut nuvarande `<table>` med jämna kolumner mot `<table style={{ tableLayout: 'fixed', borderCollapse: 'collapse' }}>` och en `<colgroup>` med en `<col>` per kolumn där `width` sätts i px enligt tabellen ovan. Första kolumnen är radnummer (32 px).
-- Rubrikrad visar `H I J K L M N O P Q R S T` (Excel-bokstäver istället för 1–13) för att matcha Excel-fönstret på bilden. Bakgrund `bg-muted`, font `text-xs`, centrerad.
-- Radnummer-kolumn visar `21`–`50` (Excel-radnummer), sticky vänster, `bg-muted`, `text-xs`, höger-justerad med liten padding.
-- Varje cell: höjd 17 px (`h-[17px]`), `p-0`. Inputen inuti: `h-full w-full border-0 bg-transparent px-1 text-xs leading-none focus:outline-none focus:ring-1 focus:ring-ring`.
-- **Svarta kantlinjer**: alla `<td>`/`<th>` får `border border-black` (1 px). `borderCollapse: collapse` gör att linjerna inte dubblas. Använd direkt `border-black` (inte semantic token) eftersom det är en visuell Excel-replika och ska se identisk ut i light/dark.
-- Wrappern runt tabellen får `overflow-x-auto` så mobil fungerar, samt `inline-block` så tabellen inte sträcks ut.
-- Inga ändringar i datamodell, debouncing, eller export — bara CSS/markup i `RemarksGrid`.
+Implementeras genom att sätta individuella `borderTop/Right/Bottom/Left: "1px solid black"` per `<td>` istället för shorthand `border`. Ingen ändring i export, datamodell eller proportioner.
 
-## Filer som ändras
+## Filer
 
-- `src/sections/UnitsSection.tsx` — uppdatera `RemarksGrid`-komponenten enligt ovan.
-
-Inga ändringar i `excelExport.ts`, `db.ts` eller mallen.
+- `src/sections/UnitsSection.tsx` — uppdatera `RemarksGrid` cell-rendering med per-sida border-logik enligt ovan.
