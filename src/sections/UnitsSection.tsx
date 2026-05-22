@@ -308,6 +308,10 @@ function UnitEditor({
 
 const GRID_ROWS = 30;
 const GRID_COLS = 13;
+const COL_LETTERS = ["H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T"];
+const COL_WIDTHS = [29, 71, 64, 64, 26, 23, 12, 15, 13, 31, 20, 25, 27];
+const ROW_NUM_WIDTH = 32;
+const ROW_HEIGHT = 17;
 
 function RemarksGrid({
   value,
@@ -328,34 +332,55 @@ function RemarksGrid({
   };
 
   return (
-    <div className="overflow-auto border border-border rounded-md max-h-[60vh]">
-      <table className="border-collapse text-sm">
-        <thead className="sticky top-0 z-10 bg-muted">
-          <tr>
-            <th className="sticky left-0 z-20 bg-muted border border-border w-10 h-8 text-xs font-semibold text-muted-foreground"></th>
-            {Array.from({ length: GRID_COLS }, (_, c) => (
+    <div className="overflow-auto max-h-[70vh]">
+      <table
+        className="text-xs"
+        style={{ tableLayout: "fixed", borderCollapse: "collapse" }}
+      >
+        <colgroup>
+          <col style={{ width: ROW_NUM_WIDTH }} />
+          {COL_WIDTHS.map((w, i) => (
+            <col key={i} style={{ width: w }} />
+          ))}
+        </colgroup>
+        <thead>
+          <tr style={{ height: ROW_HEIGHT }}>
+            <th
+              className="sticky left-0 top-0 z-20 bg-muted text-center font-semibold text-muted-foreground"
+              style={{ border: "1px solid black", height: ROW_HEIGHT }}
+            />
+            {COL_LETTERS.map((l, i) => (
               <th
-                key={c}
-                className="border border-border w-28 h-8 text-xs font-semibold text-muted-foreground"
+                key={i}
+                className="sticky top-0 z-10 bg-muted text-center font-semibold text-muted-foreground"
+                style={{ border: "1px solid black", height: ROW_HEIGHT }}
               >
-                {c + 1}
+                {l}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
           {Array.from({ length: GRID_ROWS }, (_, r) => (
-            <tr key={r}>
-              <th className="sticky left-0 z-10 bg-muted border border-border w-10 h-8 text-xs font-semibold text-muted-foreground text-center">
-                {r + 1}
+            <tr key={r} style={{ height: ROW_HEIGHT }}>
+              <th
+                className="sticky left-0 z-10 bg-muted text-right pr-1 font-semibold text-muted-foreground"
+                style={{ border: "1px solid black", height: ROW_HEIGHT }}
+              >
+                {r + 21}
               </th>
               {Array.from({ length: GRID_COLS }, (_, c) => (
-                <td key={c} className="border border-border p-0">
+                <td
+                  key={c}
+                  className="p-0"
+                  style={{ border: "1px solid black", height: ROW_HEIGHT }}
+                >
                   <input
                     type="text"
                     value={getCell(r, c)}
                     onChange={(e) => setCell(r, c, e.target.value)}
-                    className="w-28 h-8 px-2 bg-transparent outline-none focus:bg-accent/40 text-sm"
+                    className="block w-full bg-transparent px-1 text-xs leading-none focus:bg-accent/40 focus:outline-none"
+                    style={{ height: ROW_HEIGHT - 2, border: 0 }}
                   />
                 </td>
               ))}
@@ -366,6 +391,7 @@ function RemarksGrid({
     </div>
   );
 }
+
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
