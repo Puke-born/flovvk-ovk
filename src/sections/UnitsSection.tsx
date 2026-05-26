@@ -323,13 +323,14 @@ function RemarksGrid({
   const getCell = (r: number, c: number) => value?.[r]?.[c] ?? "";
 
   useEffect(() => {
+    if (value === undefined) return;
     const defaults: Array<[number, number, string]> = [
       [0, 1, "Märkeffekt:"],
       [2, 1, "Luftmängd:"],
     ];
     const needs = defaults.filter(([r, c]) => !(value?.[r]?.[c]));
     if (needs.length === 0) return;
-    const next: string[][] = (value ?? []).map((row) => [...(row ?? [])]);
+    const next: string[][] = value.map((row) => [...(row ?? [])]);
     for (const [r, c, v] of needs) {
       while (next.length <= r) next.push([]);
       const row = [...(next[r] ?? [])];
@@ -413,7 +414,7 @@ function RemarksGrid({
                     {/* Overlay-text som får flöda över tomma grannceller */}
                     <div
                       aria-hidden
-                      className="absolute top-0 left-0 px-1 text-xs leading-none whitespace-nowrap pointer-events-none"
+                      className="absolute top-0 left-0 px-1 text-xs leading-none whitespace-nowrap pointer-events-none text-foreground"
                       style={{
                         height: ROW_HEIGHT,
                         lineHeight: `${ROW_HEIGHT}px`,
@@ -427,9 +428,10 @@ function RemarksGrid({
                       type="text"
                       value={val}
                       onChange={(e) => setCell(r, c, e.target.value)}
-                      className="absolute inset-0 w-full px-1 text-xs leading-none bg-transparent text-transparent caret-foreground focus:bg-background focus:text-foreground focus:z-20 focus:outline-none focus:ring-1 focus:ring-primary"
-                      style={{ border: 0 }}
+                      className="absolute inset-0 w-full px-1 text-xs leading-none bg-transparent text-transparent caret-foreground focus:bg-background focus:text-foreground focus:z-20 focus:outline-none focus:ring-1 focus:ring-primary [appearance:none]"
+                      style={{ border: 0, background: "transparent" }}
                     />
+
                   </td>
                 );
               })}
