@@ -1,37 +1,56 @@
-## Mål
+## Bakgrund
 
-Få text i en cell att flöda över intilliggande tomma celler (Excel-beteende). Idag klipps texten av eftersom `<input>` alltid klipper sitt innehåll vid sin egen bredd och täcks av nästa cell.
+Texterna "Märkeffekt:" (I21) och "Luftmängd:" (I23) syns i den exporterade Excel-filen — men antingen är de inbakade i mallens celler eller skrivs från `gridCells`. I appens rutnät ser användaren dem inte. Två separata problem ska lösas:
 
-## Lösning
+1. **Datan finns inte (eller hinner inte synas) i `gridCells`** för existerande aggregat — prefill-effekten lagts in men verkar inte slå igenom visuellt.
+2. **Overlay-texten i cellen renderas inte tydligt** — grannens `<input>` har ev. UA-bakgrund som täcker den utflödande texten, eller färgen ärvs inte.
 
-I `RemarksGrid` (src/sections/UnitsSection.tsx), byt ut nuvarande `<input>`-rendering mot en cell-wrapper som innehåller två lager:
+Målet: när rutnätet ritas ska I21="Märkeffekt:" och I23="Luftmängd:" synas direkt, och exporten ska spegla exakt det som står i rutnätet (inga "osynliga" defaultvärden från mallen).
 
-1. **Overflow-overlay** (visas när cellen INTE är fokuserad):
-   - `<div>` absolut-positionerad ovanpå cellen.
-   - `white-space: nowrap`, `overflow: visible`, `pointer-events: none`.
-   - Bredd: `width: max-content` (eller `width: auto`) så texten får sin naturliga längd.
-   - `z-index` högre än grannceller men lägre än fokuserad input.
-   - Visar `getCell(r, c)`.
+## Ändringar
 
-2. **Input-lager** (alltid i DOM för tab/typing):
-   - `<input>` med `position: absolute; inset: 0`.
-   - `background: transparent`, `color: transparent` när inte fokuserad (för att inte dubbel-rita text), `color: inherit` på `:focus`.
-   - På `:focus` får inputen `z-index` högst och `background: hsl(var(--background))` så man ser vad man skriver utan att grannceller stör.
-   - Vid focus får cellen även förhöjt z-index så omkringliggande inte täcker.
+### 1. Initiera `gridCells` när ett aggregat skapas (`src/lib/db.ts`)
 
-Cell-`<td>` får `position: relative` och `overflow: visible`. Tabellens `overflow: visible` redan ok (containern har `overflow: auto`).
+I `addUnit` (och `duplicateUnit` om källan saknar dem) sätt:
+```ts
+gridCells: (() => {
+  const g: string[][] = [];
+  g[0] = []; g[0][1] = "Märkeffekt:";
+  g[2] = []; g[2][1] = "Luftmängd:";
+  return g;
+})()
+```
+Då finns texterna i datan från sekund noll — ingen useEffect-race.
 
-För att grannceller inte ska täcka overlay-texten: ge varje `<td>` `background` endast vid fokus. Tomma celler har `background: transparent` (vilket de redan har) så overflow-texten syns igenom dem.
+### 2. Säkerställ prefill för befintliga aggregat (`src/sections/UnitsSection.tsx`)
 
-## Detaljer
+Behåll useEffect i `RemarksGrid`, men:
+- Kör den synkront i samma render som värdet sätts (redan så).
+- När `value` är `undefined`, hoppa över anropet (parent ska skicka ifylld array efter punkt 1) — då undviker vi att skriva på inläsning innan Dexie-svar.
 
-- Lägg till lokalt `focusedCell` state `{r,c} | null` i `RemarksGrid` för att kunna sätta z-index/bg vid fokus.
-- Alt: använd CSS `:focus-within` på `<td>` istället för React-state — enklare, ingen rerender.
-- Overlay text använder samma typografi som input (`text-xs`, samma padding `px-1`, samma höjd) så inget visuellt hopp vid focus/blur.
-- Border-logiken är oförändrad.
+### 3. Gör overlay-texten synlig (`src/sections/UnitsSection.tsx`)
+
+I `RemarksGrid` cell-rendering:
+- Lägg `text-foreground` på overlay-`<div>` så färgen är explicit.
+- Säkerställ att `<input>` har `bg-transparent` (redan) **och** `[appearance:none]` så vissa webbläsares default-fält-bakgrund inte täcker grannens overlay.
+- Lägg `colorScheme: "normal"` eller `style={{ background: "transparent" }}` inline som extra säkerhet.
+
+### 4. Inga ändringar i `excelExport.ts`
+
+`writeUnitGrid` skriver redan från `gridCells`. När punkt 1 är på plats kommer exporten att spegla rutnätet eftersom texterna då alltid finns där (inte längre beroende av att mallens cell råkar ha samma text).
 
 ## Filer
 
-- `src/sections/UnitsSection.tsx` — uppdatera cell-rendering i `RemarksGrid`.
+- `src/lib/db.ts` — initiera `gridCells` i `addUnit`.
+- `src/sections/UnitsSection.tsx` — overlay får explicit färg, input får `appearance:none`/transparent bg, prefill-effekt hoppar över när `value` är `undefined`.
 
-Inga ändringar i datamodell eller export.
+## Verifiering
+
+1. Öppna ett befintligt aggregat → texterna ska visas i I21/I23 inom någon sekund (prefill-effekten kör).
+2. Skapa nytt aggregat → texterna syns direkt utan blink.
+3. Ändra "Märkeffekt:" till "Märkeffekt 5kW" i rutnätet → exportera → cell I21 i Excel = "Märkeffekt 5kW".
+4. Töm I21 i rutnätet → exportera → cell I21 i Excel är tom (eller behåller mallens text om vi inte skriver tomma — bekräfta med användaren om tomma celler ska rensa mallens text också).
+
+## Öppen fråga
+
+Just nu hoppar `writeUnitGrid` över tomma celler för att bevara mallens formatering. Om användaren tömmer en cell i rutnätet vill de troligen att exporten också blir tom. Vill du att tomma celler i rutnätet ska skriva över mallens text (skriva tom sträng), eller behålla nuvarande beteende?

@@ -247,6 +247,9 @@ export async function addUnit(inspectionId: string): Promise<string> {
   const existing = await db.units.where("inspectionId").equals(inspectionId).count();
   const id = uid();
   const now = Date.now();
+  const gridCells: string[][] = [];
+  gridCells[0] = []; gridCells[0][1] = "Märkeffekt:";
+  gridCells[2] = []; gridCells[2][1] = "Luftmängd:";
   await db.units.add({
     id,
     inspectionId,
@@ -258,6 +261,7 @@ export async function addUnit(inspectionId: string): Promise<string> {
     verdict: "",
     status: "",
     replacementInterval: "",
+    gridCells,
   });
   await db.inspections.update(inspectionId, { updatedAt: now });
   return id;
