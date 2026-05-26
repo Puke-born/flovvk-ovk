@@ -339,7 +339,7 @@ function RemarksGrid({
     }
     onChange(next);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [value]);
   const setCell = (r: number, c: number, v: string) => {
     const next: string[][] = (value ?? []).map((row) => [...(row ?? [])]);
     while (next.length <= r) next.push([]);
