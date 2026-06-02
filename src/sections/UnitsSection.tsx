@@ -621,11 +621,8 @@ function RemarksGrid({
               style={{ border: "1px solid black", height: ROW_HEIGHT }}
             />
             {COL_LETTERS.map((l, i) => {
-              const activeNav = navIndex(active.c);
-              const highlight =
-                (activeNav === 0 && i === 0) ||
-                (activeNav === 1 && i >= MERGE_START && i <= MERGE_END) ||
-                (activeNav === 2 && i === 12);
+              const highlight = active.c === i;
+
               return (
                 <th
                   key={i}
