@@ -469,13 +469,12 @@ function RemarksGrid({
   const onCopy = (e: React.ClipboardEvent) => {
     if (editing) return;
     e.preventDefault();
-    e.clipboardData.setData("text/plain", getCell(active.r, navIndex(active.c) === 1 ? MERGE_START : active.c));
+    e.clipboardData.setData("text/plain", getCell(active.r, active.c));
   };
   const onCut = (e: React.ClipboardEvent) => {
     if (editing) return;
     e.preventDefault();
-    const c = navIndex(active.c) === 1 ? MERGE_START : active.c;
-    e.clipboardData.setData("text/plain", getCell(active.r, c));
+    e.clipboardData.setData("text/plain", getCell(active.r, active.c));
     setCell(active.r, active.c, "");
   };
   const onPaste = (e: React.ClipboardEvent) => {
@@ -485,14 +484,12 @@ function RemarksGrid({
     e.preventDefault();
     if (text.includes("\t") || text.includes("\n")) {
       const matrix = text.replace(/\r/g, "").split("\n").map((l) => l.split("\t"));
-      const startIdx = navIndex(active.c);
       const updates: Array<{ r: number; c: number; v: string }> = [];
       matrix.forEach((row, dr) => {
         row.forEach((v, dc) => {
-          const navIdx = startIdx + dc;
-          if (navIdx >= NAV_COLS.length) return;
-          const c = NAV_COLS[navIdx];
-          updates.push({ r: active.r + dr, c: c === MERGE_START ? MERGE_START : c, v });
+          const c = active.c + dc;
+          if (c >= COL_WIDTHS.length) return;
+          updates.push({ r: active.r + dr, c, v });
         });
       });
       writeCells(updates);
@@ -500,6 +497,7 @@ function RemarksGrid({
       setCell(active.r, active.c, text);
     }
   };
+
 
   // Autoscroll active cell into view
   useEffect(() => {
