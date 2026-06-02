@@ -311,26 +311,18 @@ const COL_LETTERS = ["H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S",
 const COL_WIDTHS = [29, 71, 64, 64, 26, 23, 12, 15, 13, 31, 20, 25, 27];
 const ROW_NUM_WIDTH = 32;
 const ROW_HEIGHT = 17;
-
-// Merged region: cols 1..11 (I..S) act as one cell, anchored at col 1.
-const MERGE_START = 1;
-const MERGE_END = 11;
-const MERGE_WIDTH = COL_WIDTHS.slice(MERGE_START, MERGE_END + 1).reduce((a, b) => a + b, 0);
-// Logical/navigable column indices (skipping merged interior).
-const NAV_COLS = [0, 1, 12];
+const NAV_COLS = COL_WIDTHS.map((_, i) => i);
 
 function navIndex(c: number) {
-  const i = NAV_COLS.indexOf(c);
-  return i === -1 ? 1 : i; // anything inside the merge -> anchor (1)
+  return c;
 }
 function nextNavCol(c: number, dir: 1 | -1) {
-  const i = navIndex(c);
-  const ni = Math.max(0, Math.min(NAV_COLS.length - 1, i + dir));
-  return NAV_COLS[ni];
+  return Math.max(0, Math.min(COL_WIDTHS.length - 1, c + dir));
 }
 function cellWidth(c: number) {
-  return c === MERGE_START ? MERGE_WIDTH : COL_WIDTHS[c];
+  return COL_WIDTHS[c];
 }
+
 
 type Cell = { r: number; c: number };
 
@@ -369,8 +361,8 @@ function RemarksGrid({
     }
     onChange(next);
   };
-  const setCell = (r: number, c: number, v: string) =>
-    writeCells([{ r, c: navIndex(c) === 1 ? MERGE_START : c, v }]);
+  const setCell = (r: number, c: number, v: string) => writeCells([{ r, c, v }]);
+
 
   const commitDraft = () => {
     setCell(active.r, active.c, draft);
@@ -477,13 +469,12 @@ function RemarksGrid({
   const onCopy = (e: React.ClipboardEvent) => {
     if (editing) return;
     e.preventDefault();
-    e.clipboardData.setData("text/plain", getCell(active.r, navIndex(active.c) === 1 ? MERGE_START : active.c));
+    e.clipboardData.setData("text/plain", getCell(active.r, active.c));
   };
   const onCut = (e: React.ClipboardEvent) => {
     if (editing) return;
     e.preventDefault();
-    const c = navIndex(active.c) === 1 ? MERGE_START : active.c;
-    e.clipboardData.setData("text/plain", getCell(active.r, c));
+    e.clipboardData.setData("text/plain", getCell(active.r, active.c));
     setCell(active.r, active.c, "");
   };
   const onPaste = (e: React.ClipboardEvent) => {
@@ -493,14 +484,12 @@ function RemarksGrid({
     e.preventDefault();
     if (text.includes("\t") || text.includes("\n")) {
       const matrix = text.replace(/\r/g, "").split("\n").map((l) => l.split("\t"));
-      const startIdx = navIndex(active.c);
       const updates: Array<{ r: number; c: number; v: string }> = [];
       matrix.forEach((row, dr) => {
         row.forEach((v, dc) => {
-          const navIdx = startIdx + dc;
-          if (navIdx >= NAV_COLS.length) return;
-          const c = NAV_COLS[navIdx];
-          updates.push({ r: active.r + dr, c: c === MERGE_START ? MERGE_START : c, v });
+          const c = active.c + dc;
+          if (c >= COL_WIDTHS.length) return;
+          updates.push({ r: active.r + dr, c, v });
         });
       });
       writeCells(updates);
@@ -508,6 +497,7 @@ function RemarksGrid({
       setCell(active.r, active.c, text);
     }
   };
+
 
   // Autoscroll active cell into view
   useEffect(() => {
@@ -524,24 +514,23 @@ function RemarksGrid({
 
   const renderCell = (r: number, c: number) => {
     const isActive = active.r === r && active.c === c;
-    const dataCol = c === MERGE_START ? MERGE_START : c;
-    const val = getCell(r, dataCol);
-    const colSpan = c === MERGE_START ? MERGE_END - MERGE_START + 1 : 1;
+    const val = getCell(r, c);
 
-    // Excel-style overflow: extend overlay width into subsequent empty nav cells.
+
+    // Excel-style overflow: extend overlay width into subsequent empty cells.
     let maxW = cellWidth(c);
-    const idx = navIndex(c);
-    for (let i = idx + 1; i < NAV_COLS.length; i++) {
-      const nc = NAV_COLS[i];
-      const ncVal = getCell(r, nc === MERGE_START ? MERGE_START : nc);
-      if (ncVal === "") maxW += cellWidth(nc);
+    for (let nc = c + 1; nc < COL_WIDTHS.length; nc++) {
+      if (getCell(r, nc) === "") maxW += cellWidth(nc);
       else break;
     }
+
+    // Pair rows visually: 21-22, 23-24, ... (no border between pair members)
+    const hideBottom = r % 2 === 0;
+    const hideTop = r % 2 === 1;
 
     return (
       <td
         key={c}
-        colSpan={colSpan}
         ref={isActive ? activeTdRef : undefined}
         onMouseDown={(e) => {
           e.preventDefault();
@@ -553,18 +542,22 @@ function RemarksGrid({
         }}
         onDoubleClick={() => {
           setActive({ r, c });
-          setDraft(getCell(r, dataCol));
+          setDraft(getCell(r, c));
           setEditing(true);
         }}
         className="p-0 relative"
         style={{
-          border: "1px solid black",
+          borderLeft: "1px solid black",
+          borderRight: "1px solid black",
+          borderTop: hideTop ? "none" : "1px solid black",
+          borderBottom: hideBottom ? "none" : "1px solid black",
           height: ROW_HEIGHT,
           overflow: "visible",
           boxShadow: isActive && !editing ? "inset 0 0 0 2px hsl(var(--primary))" : undefined,
           background: "hsl(var(--background))",
         }}
       >
+
         {!(isActive && editing) && (
           <div
             aria-hidden
@@ -587,7 +580,7 @@ function RemarksGrid({
             onChange={(e) => setDraft(e.target.value)}
             onBlur={() => {
               if (editing) {
-                setCell(r, dataCol, draft);
+                setCell(r, c, draft);
                 setEditing(false);
               }
             }}
@@ -628,11 +621,8 @@ function RemarksGrid({
               style={{ border: "1px solid black", height: ROW_HEIGHT }}
             />
             {COL_LETTERS.map((l, i) => {
-              const activeNav = navIndex(active.c);
-              const highlight =
-                (activeNav === 0 && i === 0) ||
-                (activeNav === 1 && i >= MERGE_START && i <= MERGE_END) ||
-                (activeNav === 2 && i === 12);
+              const highlight = active.c === i;
+
               return (
                 <th
                   key={i}
