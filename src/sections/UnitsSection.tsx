@@ -580,7 +580,7 @@ function RemarksGrid({
             onChange={(e) => setDraft(e.target.value)}
             onBlur={() => {
               if (editing) {
-                setCell(r, dataCol, draft);
+                setCell(r, c, draft);
                 setEditing(false);
               }
             }}
