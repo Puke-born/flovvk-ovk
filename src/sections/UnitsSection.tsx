@@ -311,26 +311,18 @@ const COL_LETTERS = ["H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S",
 const COL_WIDTHS = [29, 71, 64, 64, 26, 23, 12, 15, 13, 31, 20, 25, 27];
 const ROW_NUM_WIDTH = 32;
 const ROW_HEIGHT = 17;
-
-// Merged region: cols 1..11 (I..S) act as one cell, anchored at col 1.
-const MERGE_START = 1;
-const MERGE_END = 11;
-const MERGE_WIDTH = COL_WIDTHS.slice(MERGE_START, MERGE_END + 1).reduce((a, b) => a + b, 0);
-// Logical/navigable column indices (skipping merged interior).
-const NAV_COLS = [0, 1, 12];
+const NAV_COLS = COL_WIDTHS.map((_, i) => i);
 
 function navIndex(c: number) {
-  const i = NAV_COLS.indexOf(c);
-  return i === -1 ? 1 : i; // anything inside the merge -> anchor (1)
+  return c;
 }
 function nextNavCol(c: number, dir: 1 | -1) {
-  const i = navIndex(c);
-  const ni = Math.max(0, Math.min(NAV_COLS.length - 1, i + dir));
-  return NAV_COLS[ni];
+  return Math.max(0, Math.min(COL_WIDTHS.length - 1, c + dir));
 }
 function cellWidth(c: number) {
-  return c === MERGE_START ? MERGE_WIDTH : COL_WIDTHS[c];
+  return COL_WIDTHS[c];
 }
+
 
 type Cell = { r: number; c: number };
 
