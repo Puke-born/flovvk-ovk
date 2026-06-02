@@ -514,9 +514,8 @@ function RemarksGrid({
 
   const renderCell = (r: number, c: number) => {
     const isActive = active.r === r && active.c === c;
-    const dataCol = c === MERGE_START ? MERGE_START : c;
-    const val = getCell(r, dataCol);
-    const colSpan = c === MERGE_START ? MERGE_END - MERGE_START + 1 : 1;
+    const val = getCell(r, c);
+
 
     // Excel-style overflow: extend overlay width into subsequent empty nav cells.
     let maxW = cellWidth(c);
