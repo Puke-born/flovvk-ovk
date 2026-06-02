@@ -517,20 +517,20 @@ function RemarksGrid({
     const val = getCell(r, c);
 
 
-    // Excel-style overflow: extend overlay width into subsequent empty nav cells.
+    // Excel-style overflow: extend overlay width into subsequent empty cells.
     let maxW = cellWidth(c);
-    const idx = navIndex(c);
-    for (let i = idx + 1; i < NAV_COLS.length; i++) {
-      const nc = NAV_COLS[i];
-      const ncVal = getCell(r, nc === MERGE_START ? MERGE_START : nc);
-      if (ncVal === "") maxW += cellWidth(nc);
+    for (let nc = c + 1; nc < COL_WIDTHS.length; nc++) {
+      if (getCell(r, nc) === "") maxW += cellWidth(nc);
       else break;
     }
+
+    // Pair rows visually: 21-22, 23-24, ... (no border between pair members)
+    const hideBottom = r % 2 === 0;
+    const hideTop = r % 2 === 1;
 
     return (
       <td
         key={c}
-        colSpan={colSpan}
         ref={isActive ? activeTdRef : undefined}
         onMouseDown={(e) => {
           e.preventDefault();
@@ -542,18 +542,22 @@ function RemarksGrid({
         }}
         onDoubleClick={() => {
           setActive({ r, c });
-          setDraft(getCell(r, dataCol));
+          setDraft(getCell(r, c));
           setEditing(true);
         }}
         className="p-0 relative"
         style={{
-          border: "1px solid black",
+          borderLeft: "1px solid black",
+          borderRight: "1px solid black",
+          borderTop: hideTop ? "none" : "1px solid black",
+          borderBottom: hideBottom ? "none" : "1px solid black",
           height: ROW_HEIGHT,
           overflow: "visible",
           boxShadow: isActive && !editing ? "inset 0 0 0 2px hsl(var(--primary))" : undefined,
           background: "hsl(var(--background))",
         }}
       >
+
         {!(isActive && editing) && (
           <div
             aria-hidden
