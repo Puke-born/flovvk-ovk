@@ -361,8 +361,8 @@ function RemarksGrid({
     }
     onChange(next);
   };
-  const setCell = (r: number, c: number, v: string) =>
-    writeCells([{ r, c: navIndex(c) === 1 ? MERGE_START : c, v }]);
+  const setCell = (r: number, c: number, v: string) => writeCells([{ r, c, v }]);
+
 
   const commitDraft = () => {
     setCell(active.r, active.c, draft);
