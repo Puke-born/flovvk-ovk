@@ -307,11 +307,32 @@ function UnitEditor({
 }
 
 const GRID_ROWS = 30;
-const GRID_COLS = 13;
 const COL_LETTERS = ["H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T"];
 const COL_WIDTHS = [29, 71, 64, 64, 26, 23, 12, 15, 13, 31, 20, 25, 27];
 const ROW_NUM_WIDTH = 32;
 const ROW_HEIGHT = 17;
+
+// Merged region: cols 1..11 (I..S) act as one cell, anchored at col 1.
+const MERGE_START = 1;
+const MERGE_END = 11;
+const MERGE_WIDTH = COL_WIDTHS.slice(MERGE_START, MERGE_END + 1).reduce((a, b) => a + b, 0);
+// Logical/navigable column indices (skipping merged interior).
+const NAV_COLS = [0, 1, 12];
+
+function navIndex(c: number) {
+  const i = NAV_COLS.indexOf(c);
+  return i === -1 ? 1 : i; // anything inside the merge -> anchor (1)
+}
+function nextNavCol(c: number, dir: 1 | -1) {
+  const i = navIndex(c);
+  const ni = Math.max(0, Math.min(NAV_COLS.length - 1, i + dir));
+  return NAV_COLS[ni];
+}
+function cellWidth(c: number) {
+  return c === MERGE_START ? MERGE_WIDTH : COL_WIDTHS[c];
+}
+
+type Cell = { r: number; c: number };
 
 function RemarksGrid({
   value,
@@ -320,36 +341,280 @@ function RemarksGrid({
   value: string[][] | undefined;
   onChange: (next: string[][]) => void;
 }) {
+  const [active, setActive] = useState<Cell>({ r: 0, c: 0 });
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const activeTdRef = useRef<HTMLTableCellElement>(null);
+
   const getCell = (r: number, c: number) => value?.[r]?.[c] ?? "";
 
   // Prefill defaults bara om gridCells är helt tomt (nytt aggregat utan data).
-  // Inte vid varje ändring — annars går det inte att radera texten.
   useEffect(() => {
     if (value !== undefined) return;
-    onChange([
-      [],
-      ["", "Märkeffekt:"],
-      [],
-      ["", "Luftmängd:"],
-    ]);
+    onChange([[], ["", "Märkeffekt:"], [], ["", "Luftmängd:"]]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-  const setCell = (r: number, c: number, v: string) => {
+
+  const writeCells = (updates: Array<{ r: number; c: number; v: string }>) => {
     const next: string[][] = (value ?? []).map((row) => [...(row ?? [])]);
-    while (next.length <= r) next.push([]);
-    const row = [...(next[r] ?? [])];
-    while (row.length <= c) row.push("");
-    row[c] = v;
-    next[r] = row;
+    for (const { r, c, v } of updates) {
+      if (r < 0 || r >= GRID_ROWS) continue;
+      while (next.length <= r) next.push([]);
+      const row = [...(next[r] ?? [])];
+      while (row.length <= c) row.push("");
+      row[c] = v;
+      next[r] = row;
+    }
     onChange(next);
+  };
+  const setCell = (r: number, c: number, v: string) =>
+    writeCells([{ r, c: navIndex(c) === 1 ? MERGE_START : c, v }]);
+
+  const commitDraft = () => {
+    setCell(active.r, active.c, draft);
+    setEditing(false);
+  };
+  const cancelEdit = () => setEditing(false);
+
+  const moveTo = (r: number, c: number) => {
+    setActive({
+      r: Math.max(0, Math.min(GRID_ROWS - 1, r)),
+      c: NAV_COLS.includes(c) ? c : NAV_COLS[navIndex(c)],
+    });
+    setEditing(false);
+  };
+  const move = (dr: number, dc: -1 | 0 | 1) => {
+    const nc = dc === 0 ? active.c : nextNavCol(active.c, dc);
+    moveTo(active.r + dr, nc);
+  };
+
+  const startEdit = (initial?: string) => {
+    setDraft(initial !== undefined ? initial : getCell(active.r, active.c));
+    setEditing(true);
+  };
+
+  const refocusContainer = () => {
+    // Defer so React finishes unmounting the input first.
+    setTimeout(() => containerRef.current?.focus(), 0);
+  };
+
+  const onKeyDown = (e: React.KeyboardEvent) => {
+    if (editing) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        commitDraft();
+        move(1, 0);
+        refocusContainer();
+      } else if (e.key === "Escape") {
+        e.preventDefault();
+        cancelEdit();
+        refocusContainer();
+      } else if (e.key === "Tab") {
+        e.preventDefault();
+        commitDraft();
+        move(0, e.shiftKey ? -1 : 1);
+        refocusContainer();
+      }
+      return;
+    }
+    const meta = e.ctrlKey || e.metaKey;
+    switch (e.key) {
+      case "ArrowUp":
+        e.preventDefault();
+        move(-1, 0);
+        return;
+      case "ArrowDown":
+        e.preventDefault();
+        move(1, 0);
+        return;
+      case "ArrowLeft":
+        e.preventDefault();
+        move(0, -1);
+        return;
+      case "ArrowRight":
+        e.preventDefault();
+        move(0, 1);
+        return;
+      case "Tab":
+        e.preventDefault();
+        move(0, e.shiftKey ? -1 : 1);
+        return;
+      case "Enter":
+      case "F2":
+        e.preventDefault();
+        startEdit();
+        return;
+      case "Delete":
+      case "Backspace":
+        e.preventDefault();
+        setCell(active.r, active.c, "");
+        return;
+      case "Home":
+        e.preventDefault();
+        moveTo(meta ? 0 : active.r, NAV_COLS[0]);
+        return;
+      case "End":
+        e.preventDefault();
+        moveTo(meta ? GRID_ROWS - 1 : active.r, NAV_COLS[NAV_COLS.length - 1]);
+        return;
+      case "PageUp":
+        e.preventDefault();
+        moveTo(active.r - 10, active.c);
+        return;
+      case "PageDown":
+        e.preventDefault();
+        moveTo(active.r + 10, active.c);
+        return;
+    }
+    if (!meta && !e.altKey && e.key.length === 1) {
+      e.preventDefault();
+      startEdit(e.key);
+    }
+  };
+
+  const onCopy = (e: React.ClipboardEvent) => {
+    if (editing) return;
+    e.preventDefault();
+    e.clipboardData.setData("text/plain", getCell(active.r, navIndex(active.c) === 1 ? MERGE_START : active.c));
+  };
+  const onCut = (e: React.ClipboardEvent) => {
+    if (editing) return;
+    e.preventDefault();
+    const c = navIndex(active.c) === 1 ? MERGE_START : active.c;
+    e.clipboardData.setData("text/plain", getCell(active.r, c));
+    setCell(active.r, active.c, "");
+  };
+  const onPaste = (e: React.ClipboardEvent) => {
+    if (editing) return;
+    const text = e.clipboardData.getData("text/plain");
+    if (!text) return;
+    e.preventDefault();
+    if (text.includes("\t") || text.includes("\n")) {
+      const matrix = text.replace(/\r/g, "").split("\n").map((l) => l.split("\t"));
+      const startIdx = navIndex(active.c);
+      const updates: Array<{ r: number; c: number; v: string }> = [];
+      matrix.forEach((row, dr) => {
+        row.forEach((v, dc) => {
+          const navIdx = startIdx + dc;
+          if (navIdx >= NAV_COLS.length) return;
+          const c = NAV_COLS[navIdx];
+          updates.push({ r: active.r + dr, c: c === MERGE_START ? MERGE_START : c, v });
+        });
+      });
+      writeCells(updates);
+    } else {
+      setCell(active.r, active.c, text);
+    }
+  };
+
+  // Autoscroll active cell into view
+  useEffect(() => {
+    activeTdRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  }, [active]);
+
+  // Focus + select on edit start
+  useEffect(() => {
+    if (editing && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.select();
+    }
+  }, [editing]);
+
+  const renderCell = (r: number, c: number) => {
+    const isActive = active.r === r && active.c === c;
+    const dataCol = c === MERGE_START ? MERGE_START : c;
+    const val = getCell(r, dataCol);
+    const colSpan = c === MERGE_START ? MERGE_END - MERGE_START + 1 : 1;
+
+    // Excel-style overflow: extend overlay width into subsequent empty nav cells.
+    let maxW = cellWidth(c);
+    const idx = navIndex(c);
+    for (let i = idx + 1; i < NAV_COLS.length; i++) {
+      const nc = NAV_COLS[i];
+      const ncVal = getCell(r, nc === MERGE_START ? MERGE_START : nc);
+      if (ncVal === "") maxW += cellWidth(nc);
+      else break;
+    }
+
+    return (
+      <td
+        key={c}
+        colSpan={colSpan}
+        ref={isActive ? activeTdRef : undefined}
+        onMouseDown={(e) => {
+          e.preventDefault();
+          if (!(isActive && editing)) {
+            setActive({ r, c });
+            setEditing(false);
+            containerRef.current?.focus();
+          }
+        }}
+        onDoubleClick={() => {
+          setActive({ r, c });
+          setDraft(getCell(r, dataCol));
+          setEditing(true);
+        }}
+        className="p-0 relative"
+        style={{
+          border: "1px solid black",
+          height: ROW_HEIGHT,
+          overflow: "visible",
+          boxShadow: isActive && !editing ? "inset 0 0 0 2px hsl(var(--primary))" : undefined,
+          background: "hsl(var(--background))",
+        }}
+      >
+        {!(isActive && editing) && (
+          <div
+            aria-hidden
+            className="absolute top-0 left-0 px-1 text-xs leading-none whitespace-nowrap pointer-events-none text-foreground overflow-hidden"
+            style={{
+              height: ROW_HEIGHT,
+              lineHeight: `${ROW_HEIGHT}px`,
+              maxWidth: maxW,
+              zIndex: 1,
+            }}
+          >
+            {val}
+          </div>
+        )}
+        {isActive && editing && (
+          <input
+            ref={inputRef}
+            type="text"
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={() => {
+              if (editing) {
+                setCell(r, dataCol, draft);
+                setEditing(false);
+              }
+            }}
+            className="absolute top-0 left-0 h-full px-1 text-xs leading-none bg-background text-foreground z-30 focus:outline-none"
+            style={{
+              minWidth: "100%",
+              width: `max(100%, ${Math.max(cellWidth(c), draft.length * 7 + 16)}px)`,
+              border: "2px solid hsl(var(--primary))",
+              height: ROW_HEIGHT,
+            }}
+          />
+        )}
+      </td>
+    );
   };
 
   return (
-    <div className="overflow-auto max-h-[70vh]">
-      <table
-        className="text-xs"
-        style={{ tableLayout: "fixed", borderCollapse: "collapse" }}
-      >
+    <div
+      ref={containerRef}
+      tabIndex={0}
+      onKeyDown={onKeyDown}
+      onCopy={onCopy}
+      onCut={onCut}
+      onPaste={onPaste}
+      className="overflow-auto max-h-[70vh] outline-none rounded border border-transparent focus:border-primary/40"
+    >
+      <table className="text-xs select-none" style={{ tableLayout: "fixed", borderCollapse: "collapse" }}>
         <colgroup>
           <col style={{ width: ROW_NUM_WIDTH }} />
           {COL_WIDTHS.map((w, i) => (
@@ -359,75 +624,43 @@ function RemarksGrid({
         <thead>
           <tr style={{ height: ROW_HEIGHT }}>
             <th
-              className="sticky left-0 top-0 z-20 bg-muted text-center font-semibold text-muted-foreground"
+              className="sticky left-0 top-0 z-20 bg-muted"
               style={{ border: "1px solid black", height: ROW_HEIGHT }}
             />
-            {COL_LETTERS.map((l, i) => (
-              <th
-                key={i}
-                className="sticky top-0 z-10 bg-muted text-center font-semibold text-muted-foreground"
-                style={{ border: "1px solid black", height: ROW_HEIGHT }}
-              >
-                {l}
-              </th>
-            ))}
+            {COL_LETTERS.map((l, i) => {
+              const activeNav = navIndex(active.c);
+              const highlight =
+                (activeNav === 0 && i === 0) ||
+                (activeNav === 1 && i >= MERGE_START && i <= MERGE_END) ||
+                (activeNav === 2 && i === 12);
+              return (
+                <th
+                  key={i}
+                  className={cn(
+                    "sticky top-0 z-10 text-center font-semibold",
+                    highlight ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
+                  )}
+                  style={{ border: "1px solid black", height: ROW_HEIGHT }}
+                >
+                  {l}
+                </th>
+              );
+            })}
           </tr>
         </thead>
         <tbody>
           {Array.from({ length: GRID_ROWS }, (_, r) => (
             <tr key={r} style={{ height: ROW_HEIGHT }}>
               <th
-                className="sticky left-0 z-10 bg-muted text-right pr-1 font-semibold text-muted-foreground"
+                className={cn(
+                  "sticky left-0 z-10 text-right pr-1 font-semibold",
+                  active.r === r ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
+                )}
                 style={{ border: "1px solid black", height: ROW_HEIGHT }}
               >
                 {r + 21}
               </th>
-              {Array.from({ length: GRID_COLS }, (_, c) => {
-                const line = "1px solid black";
-                const none = "1px solid transparent";
-                const inMerge = c >= 1 && c <= 11;
-                const showTop = r % 2 === 0;
-                const showBottom = r % 2 === 1;
-                const showLeft = !inMerge || c === 1;
-                const showRight = !inMerge || c === 11;
-                const val = getCell(r, c);
-                return (
-                  <td
-                    key={c}
-                    className="p-0 relative [&:focus-within]:z-30"
-                    style={{
-                      borderTop: showTop ? line : none,
-                      borderBottom: showBottom ? line : none,
-                      borderLeft: showLeft ? line : none,
-                      borderRight: showRight ? line : none,
-                      height: ROW_HEIGHT,
-                      overflow: "visible",
-                    }}
-                  >
-                    {/* Overlay-text som får flöda över tomma grannceller */}
-                    <div
-                      aria-hidden
-                      className="absolute top-0 left-0 px-1 text-xs leading-none whitespace-nowrap pointer-events-none text-foreground"
-                      style={{
-                        height: ROW_HEIGHT,
-                        lineHeight: `${ROW_HEIGHT}px`,
-                        width: "max-content",
-                        zIndex: 1,
-                      }}
-                    >
-                      {val}
-                    </div>
-                    <input
-                      type="text"
-                      value={val}
-                      onChange={(e) => setCell(r, c, e.target.value)}
-                      className="absolute inset-0 w-full px-1 text-xs leading-none bg-transparent text-transparent caret-foreground focus:bg-background focus:text-foreground focus:z-20 focus:outline-none focus:ring-1 focus:ring-primary [appearance:none]"
-                      style={{ border: 0, background: "transparent" }}
-                    />
-
-                  </td>
-                );
-              })}
+              {NAV_COLS.map((c) => renderCell(r, c))}
             </tr>
           ))}
         </tbody>
@@ -435,6 +668,7 @@ function RemarksGrid({
     </div>
   );
 }
+
 
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
