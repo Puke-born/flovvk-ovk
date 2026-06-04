@@ -9,17 +9,82 @@ import {
   deleteUnit,
   STATUS_OPTIONS,
   REPLACEMENT_OPTIONS,
-  VENT_TYPES,
-  INSPECTION_TYPES,
   INSPECTION_INTERVALS,
   type Unit,
 } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/Field";
-import { SelectField } from "@/components/SelectField";
+import { SelectField, type SelectOption } from "@/components/SelectField";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 import { cn } from "@/lib/utils";
+
+const VENT_TYPE_LABELS: Record<string, string> = {
+  S: "S - Självdrag",
+  F: "F - Mekanisk frånluft",
+  FT: "FT - Mekanisk från- och tilluft",
+  FX: "FX - Mekanisk frånluft med återvinning",
+  FTX: "FTX - Mekanisk från- och tilluft med återvinning",
+};
+const VENT_TYPE_ORDER = ["S", "F", "FT", "FX", "FTX"] as const;
+
+const INSPECTION_TYPE_OPTIONS: SelectOption[] = [
+  { value: "FB", label: "FB - Första besiktning" },
+  { value: "ÅB", label: "ÅB - Återkommande besiktning" },
+  { value: "OB", label: "OB - Ombesiktning" },
+];
+
+const VERDICT_OPTIONS: SelectOption[] = [
+  { value: "G", label: "G - Godkänd" },
+  { value: "EG", label: "EG - Ej godkänd" },
+];
+
+// Vårdlokaler → 3 år oavsett ventilationstyp
+const CARE_FACILITY_KEYWORDS = [
+  "skola", "förskola", "forskola",
+  "vårdcentral", "vardcentral", "hälsocentral", "halsocentral", "jourcentral",
+  "äldreboende", "aldreboende", "säbo", "sabo", "särskilt boende", "sarskilt boende",
+  "lss", "gruppbostad", "servicebostad",
+  "tandläkar", "tandlakar", "tandvård", "tandvard",
+  "specialistläkar", "specialistlakar",
+  "korttidsboende", "växelboende", "vaxelboende", "korttidstillsyn",
+  "hvb", "behandlingshem",
+  "barnmorske", "barnavård", "barnavard", "bvc",
+  "psykatri", "psykiatri", "rättspsykiatri", "rattspsykiatri", "avgiftning",
+  "dialys", "dagvård", "dagvard", "dagverksamhet",
+  "rehab", "fysioterapi",
+  "hospice", "palliativ",
+  "laboratori", "provtagning",
+  "sterilcentral", "blodcentral",
+  "akutsjukhus", "lasarett", "sjukhus", "vårdlokal", "vardlokal",
+];
+function isCareFacility(business?: string) {
+  if (!business) return false;
+  const b = business.toLowerCase();
+  return CARE_FACILITY_KEYWORDS.some((k) => b.includes(k));
+}
+
+function parseAuthorizations(auth?: string) {
+  if (!auth) return { hasN: false, hasK: false };
+  return {
+    hasN: /\bN\b/i.test(auth),
+    hasK: /\bK\b/i.test(auth),
+  };
+}
+
+function intervalForVentType(vt?: string, care?: boolean): "3 år" | "6 år" | "" {
+  if (care) return "3 år";
+  if (vt === "FT" || vt === "FTX") return "3 år";
+  if (vt === "S" || vt === "F" || vt === "FX") return "6 år";
+  return "";
+}
+
+function addYears(dateStr: string, years: number): string {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  d.setFullYear(d.getFullYear() + years);
+  return d.toISOString().slice(0, 10);
+}
 import {
   AlertDialog,
   AlertDialogAction,
@@ -167,6 +232,61 @@ function UnitEditor({
     [],
   );
 
+  // Hämta inspektionen för att veta vald besiktningsmans behörighet
+  const inspection = useLiveQuery(() => db.inspections.get(unit.inspectionId), [unit.inspectionId]);
+  const { hasN, hasK } = parseAuthorizations(inspection?.inspectorAuthorization);
+  const anyAuth = hasN || hasK;
+  const authReason = !anyAuth
+    ? "Besiktningsmannen saknar behörighet (N eller K krävs)"
+    : "Kräver behörighet K — vald besiktningsman har endast N";
+
+  const ventOptions: SelectOption[] = VENT_TYPE_ORDER.map((v) => {
+    let disabled = false;
+    let disabledReason: string | undefined;
+    if (!anyAuth) {
+      disabled = true;
+      disabledReason = authReason;
+    } else if ((v === "FT" || v === "FTX") && !hasK) {
+      disabled = true;
+      disabledReason = authReason;
+    }
+    return { value: v, label: VENT_TYPE_LABELS[v], disabled, disabledReason };
+  });
+
+  const careFacility = isCareFacility(form.business);
+
+  // Auto-sätt besiktningsintervall utifrån ventilationstyp / vårdlokal.
+  // Skriv bara över om fältet är tomt eller är det senast auto-satta värdet.
+  const lastAutoInterval = useRef<string>(unit.inspectionInterval ?? "");
+  useEffect(() => {
+    const target = intervalForVentType(form.ventilationType, careFacility);
+    if (!target) return;
+    setForm((f) => {
+      if (!f.inspectionInterval || f.inspectionInterval === lastAutoInterval.current) {
+        lastAutoInterval.current = target;
+        return { ...f, inspectionInterval: target };
+      }
+      return f;
+    });
+  }, [form.ventilationType, careFacility]);
+
+  // Auto-sätt nästa ord. besiktning utifrån besiktningsdatum + intervall.
+  const lastAutoNext = useRef<string>(unit.nextOrdinaryDate ?? "");
+  useEffect(() => {
+    if (!form.inspectionDate || !form.inspectionInterval) return;
+    const years = form.inspectionInterval === "3 år" ? 3 : form.inspectionInterval === "6 år" ? 6 : 0;
+    if (!years) return;
+    const target = addYears(form.inspectionDate, years);
+    if (!target) return;
+    setForm((f) => {
+      if (!f.nextOrdinaryDate || f.nextOrdinaryDate === lastAutoNext.current) {
+        lastAutoNext.current = target;
+        return { ...f, nextOrdinaryDate: target };
+      }
+      return f;
+    });
+  }, [form.inspectionDate, form.inspectionInterval]);
+
   return (
     <Card className="p-4 sm:p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -221,7 +341,7 @@ function UnitEditor({
           label="Typ av ventilation"
           value={form.ventilationType ?? ""}
           onValueChange={(v) => set("ventilationType", v)}
-          options={VENT_TYPES}
+          options={ventOptions}
         />
         <Field label="Antal lägenheter" value={form.apartmentCount ?? ""} onChange={(e) => set("apartmentCount", e.target.value)} />
         <Field label="Drifttider" value={form.operatingHours ?? ""} onChange={(e) => set("operatingHours", e.target.value)} />
@@ -239,7 +359,7 @@ function UnitEditor({
           label="Typ av besiktning"
           value={form.inspectionType ?? ""}
           onValueChange={(v) => set("inspectionType", v)}
-          options={INSPECTION_TYPES}
+          options={INSPECTION_TYPE_OPTIONS}
         />
         <SelectField
           label="Besiktningsintervall"
@@ -291,6 +411,7 @@ function UnitEditor({
           value={form.status ?? ""}
           onValueChange={(v) => set("status", v as Unit["status"])}
           options={STATUS_OPTIONS}
+          allowCustom
           containerClassName="sm:col-span-2"
         />
         <SelectField
@@ -303,7 +424,7 @@ function UnitEditor({
           label="Besiktningsutlåtande"
           value={form.verdict ?? ""}
           onValueChange={(v) => set("verdict", v as Unit["verdict"])}
-          options={["G", "EG"]}
+          options={VERDICT_OPTIONS}
         />
       </Section>
     </Card>
