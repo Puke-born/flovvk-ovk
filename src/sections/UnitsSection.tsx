@@ -330,7 +330,7 @@ function cellWidth(c: number) {
 
 type Cell = { r: number; c: number };
 
-function RemarksGrid({
+const RemarksGrid = memo(function RemarksGrid({
   value,
   onChange,
 }: {
