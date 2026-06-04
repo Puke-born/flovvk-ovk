@@ -665,7 +665,7 @@ const RemarksGrid = memo(function RemarksGrid({
       </table>
     </div>
   );
-}
+});
 
 
 
