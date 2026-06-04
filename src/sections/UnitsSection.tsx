@@ -341,7 +341,7 @@ function UnitEditor({
           label="Typ av ventilation"
           value={form.ventilationType ?? ""}
           onValueChange={(v) => set("ventilationType", v)}
-          options={VENT_TYPES}
+          options={ventOptions}
         />
         <Field label="Antal lägenheter" value={form.apartmentCount ?? ""} onChange={(e) => set("apartmentCount", e.target.value)} />
         <Field label="Drifttider" value={form.operatingHours ?? ""} onChange={(e) => set("operatingHours", e.target.value)} />
