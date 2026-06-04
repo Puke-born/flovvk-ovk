@@ -527,6 +527,9 @@ function RemarksGrid({
     // Pair rows visually: 21-22, 23-24, ... (no border between pair members)
     const hideBottom = r % 2 === 0;
     const hideTop = r % 2 === 1;
+    // Remove internal borders between I (1) and S (11) — they act as one wide area.
+    const hideLeft = c >= 2 && c <= 11;
+    const hideRight = c >= 1 && c <= 10;
 
     return (
       <td
@@ -547,10 +550,11 @@ function RemarksGrid({
         }}
         className="p-0 relative"
         style={{
-          borderLeft: "1px solid black",
-          borderRight: "1px solid black",
+          borderLeft: hideLeft ? "none" : "1px solid black",
+          borderRight: hideRight ? "none" : "1px solid black",
           borderTop: hideTop ? "none" : "1px solid black",
           borderBottom: hideBottom ? "none" : "1px solid black",
+
           height: ROW_HEIGHT,
           overflow: "visible",
           boxShadow: isActive && !editing ? "inset 0 0 0 2px hsl(var(--primary))" : undefined,
@@ -605,7 +609,7 @@ function RemarksGrid({
       onCopy={onCopy}
       onCut={onCut}
       onPaste={onPaste}
-      className="overflow-auto max-h-[70vh] outline-none rounded border border-transparent focus:border-primary/40"
+      className="outline-none rounded border border-transparent focus:border-primary/40"
     >
       <table className="text-xs select-none" style={{ tableLayout: "fixed", borderCollapse: "collapse" }}>
         <colgroup>
