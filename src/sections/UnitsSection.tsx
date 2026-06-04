@@ -232,6 +232,61 @@ function UnitEditor({
     [],
   );
 
+  // Hämta inspektionen för att veta vald besiktningsmans behörighet
+  const inspection = useLiveQuery(() => db.inspections.get(unit.inspectionId), [unit.inspectionId]);
+  const { hasN, hasK } = parseAuthorizations(inspection?.inspectorAuthorization);
+  const anyAuth = hasN || hasK;
+  const authReason = !anyAuth
+    ? "Besiktningsmannen saknar behörighet (N eller K krävs)"
+    : "Kräver behörighet K — vald besiktningsman har endast N";
+
+  const ventOptions: SelectOption[] = VENT_TYPE_ORDER.map((v) => {
+    let disabled = false;
+    let disabledReason: string | undefined;
+    if (!anyAuth) {
+      disabled = true;
+      disabledReason = authReason;
+    } else if ((v === "FT" || v === "FTX") && !hasK) {
+      disabled = true;
+      disabledReason = authReason;
+    }
+    return { value: v, label: VENT_TYPE_LABELS[v], disabled, disabledReason };
+  });
+
+  const careFacility = isCareFacility(form.business);
+
+  // Auto-sätt besiktningsintervall utifrån ventilationstyp / vårdlokal.
+  // Skriv bara över om fältet är tomt eller är det senast auto-satta värdet.
+  const lastAutoInterval = useRef<string>(unit.inspectionInterval ?? "");
+  useEffect(() => {
+    const target = intervalForVentType(form.ventilationType, careFacility);
+    if (!target) return;
+    setForm((f) => {
+      if (!f.inspectionInterval || f.inspectionInterval === lastAutoInterval.current) {
+        lastAutoInterval.current = target;
+        return { ...f, inspectionInterval: target };
+      }
+      return f;
+    });
+  }, [form.ventilationType, careFacility]);
+
+  // Auto-sätt nästa ord. besiktning utifrån besiktningsdatum + intervall.
+  const lastAutoNext = useRef<string>(unit.nextOrdinaryDate ?? "");
+  useEffect(() => {
+    if (!form.inspectionDate || !form.inspectionInterval) return;
+    const years = form.inspectionInterval === "3 år" ? 3 : form.inspectionInterval === "6 år" ? 6 : 0;
+    if (!years) return;
+    const target = addYears(form.inspectionDate, years);
+    if (!target) return;
+    setForm((f) => {
+      if (!f.nextOrdinaryDate || f.nextOrdinaryDate === lastAutoNext.current) {
+        lastAutoNext.current = target;
+        return { ...f, nextOrdinaryDate: target };
+      }
+      return f;
+    });
+  }, [form.inspectionDate, form.inspectionInterval]);
+
   return (
     <Card className="p-4 sm:p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
