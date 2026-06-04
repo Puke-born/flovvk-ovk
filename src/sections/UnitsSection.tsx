@@ -276,7 +276,7 @@ function UnitEditor({
         <div className="sm:col-span-2 lg:col-span-3">
           <RemarksGrid
             value={form.gridCells}
-            onChange={(next) => set("gridCells", next)}
+            onChange={handleGridChange}
           />
         </div>
       </Section>
