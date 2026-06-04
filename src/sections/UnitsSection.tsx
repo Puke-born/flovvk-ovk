@@ -521,19 +521,6 @@ const RemarksGrid = memo(function RemarksGrid({
     const grid: number[][] = [];
     for (let r = 0; r < GRID_ROWS; r++) {
       const row = new Array<number>(nCols);
-      let acc = 0;
-      for (let c = nCols - 1; c >= 0; c--) {
-        const v = value?.[r]?.[c] ?? "";
-        if (v === "") {
-          acc += COL_WIDTHS[c];
-          row[c] = acc;
-        } else {
-          row[c] = COL_WIDTHS[c] + acc;
-          acc = 0;
-        }
-      }
-      // row[c] currently treats own cell as flexible; we want maxW = own + trailing empties.
-      // Recompute simply:
       let trailing = 0;
       for (let c = nCols - 1; c >= 0; c--) {
         const v = value?.[r]?.[c] ?? "";
@@ -550,6 +537,7 @@ const RemarksGrid = memo(function RemarksGrid({
     const isActive = active.r === r && active.c === c;
     const val = getCell(r, c);
     const maxW = overflowWidth[r][c];
+
 
 
     // Pair rows visually: 21-22, 23-24, ... (no border between pair members)
