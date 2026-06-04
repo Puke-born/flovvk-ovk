@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { Plus, Trash2, Copy } from "lucide-react";
 import {
@@ -162,6 +162,10 @@ function UnitEditor({
   );
 
   const set = <K extends keyof Unit>(k: K, v: Unit[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const handleGridChange = useCallback(
+    (next: string[][]) => setForm((f) => ({ ...f, gridCells: next })),
+    [],
+  );
 
   return (
     <Card className="p-4 sm:p-6 space-y-6">
@@ -276,7 +280,7 @@ function UnitEditor({
         <div className="sm:col-span-2 lg:col-span-3">
           <RemarksGrid
             value={form.gridCells}
-            onChange={(next) => set("gridCells", next)}
+            onChange={handleGridChange}
           />
         </div>
       </Section>
@@ -326,7 +330,7 @@ function cellWidth(c: number) {
 
 type Cell = { r: number; c: number };
 
-function RemarksGrid({
+const RemarksGrid = memo(function RemarksGrid({
   value,
   onChange,
 }: {
@@ -512,17 +516,29 @@ function RemarksGrid({
     }
   }, [editing]);
 
+  const overflowWidth = useMemo(() => {
+    const nCols = COL_WIDTHS.length;
+    const grid: number[][] = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+      const row = new Array<number>(nCols);
+      let trailing = 0;
+      for (let c = nCols - 1; c >= 0; c--) {
+        const v = value?.[r]?.[c] ?? "";
+        row[c] = COL_WIDTHS[c] + trailing;
+        if (v === "") trailing += COL_WIDTHS[c];
+        else trailing = 0;
+      }
+      grid.push(row);
+    }
+    return grid;
+  }, [value]);
+
   const renderCell = (r: number, c: number) => {
     const isActive = active.r === r && active.c === c;
     const val = getCell(r, c);
+    const maxW = overflowWidth[r][c];
 
 
-    // Excel-style overflow: extend overlay width into subsequent empty cells.
-    let maxW = cellWidth(c);
-    for (let nc = c + 1; nc < COL_WIDTHS.length; nc++) {
-      if (getCell(r, nc) === "") maxW += cellWidth(nc);
-      else break;
-    }
 
     // Pair rows visually: 21-22, 23-24, ... (no border between pair members)
     const hideBottom = r % 2 === 0;
@@ -661,7 +677,7 @@ function RemarksGrid({
       </table>
     </div>
   );
-}
+});
 
 
 
