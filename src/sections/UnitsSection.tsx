@@ -359,7 +359,7 @@ function UnitEditor({
           label="Typ av besiktning"
           value={form.inspectionType ?? ""}
           onValueChange={(v) => set("inspectionType", v)}
-          options={INSPECTION_TYPES}
+          options={INSPECTION_TYPE_OPTIONS}
         />
         <SelectField
           label="Besiktningsintervall"
