@@ -516,17 +516,41 @@ const RemarksGrid = memo(function RemarksGrid({
     }
   }, [editing]);
 
+  const overflowWidth = useMemo(() => {
+    const nCols = COL_WIDTHS.length;
+    const grid: number[][] = [];
+    for (let r = 0; r < GRID_ROWS; r++) {
+      const row = new Array<number>(nCols);
+      let acc = 0;
+      for (let c = nCols - 1; c >= 0; c--) {
+        const v = value?.[r]?.[c] ?? "";
+        if (v === "") {
+          acc += COL_WIDTHS[c];
+          row[c] = acc;
+        } else {
+          row[c] = COL_WIDTHS[c] + acc;
+          acc = 0;
+        }
+      }
+      // row[c] currently treats own cell as flexible; we want maxW = own + trailing empties.
+      // Recompute simply:
+      let trailing = 0;
+      for (let c = nCols - 1; c >= 0; c--) {
+        const v = value?.[r]?.[c] ?? "";
+        row[c] = COL_WIDTHS[c] + trailing;
+        if (v === "") trailing += COL_WIDTHS[c];
+        else trailing = 0;
+      }
+      grid.push(row);
+    }
+    return grid;
+  }, [value]);
+
   const renderCell = (r: number, c: number) => {
     const isActive = active.r === r && active.c === c;
     const val = getCell(r, c);
+    const maxW = overflowWidth[r][c];
 
-
-    // Excel-style overflow: extend overlay width into subsequent empty cells.
-    let maxW = cellWidth(c);
-    for (let nc = c + 1; nc < COL_WIDTHS.length; nc++) {
-      if (getCell(r, nc) === "") maxW += cellWidth(nc);
-      else break;
-    }
 
     // Pair rows visually: 21-22, 23-24, ... (no border between pair members)
     const hideBottom = r % 2 === 0;
