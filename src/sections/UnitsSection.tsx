@@ -411,6 +411,7 @@ function UnitEditor({
           value={form.status ?? ""}
           onValueChange={(v) => set("status", v as Unit["status"])}
           options={STATUS_OPTIONS}
+          allowCustom
           containerClassName="sm:col-span-2"
         />
         <SelectField
@@ -423,7 +424,7 @@ function UnitEditor({
           label="Besiktningsutlåtande"
           value={form.verdict ?? ""}
           onValueChange={(v) => set("verdict", v as Unit["verdict"])}
-          options={["G", "EG"]}
+          options={VERDICT_OPTIONS}
         />
       </Section>
     </Card>
