@@ -162,6 +162,10 @@ function UnitEditor({
   );
 
   const set = <K extends keyof Unit>(k: K, v: Unit[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const handleGridChange = useCallback(
+    (next: string[][]) => setForm((f) => ({ ...f, gridCells: next })),
+    [],
+  );
 
   return (
     <Card className="p-4 sm:p-6 space-y-6">
