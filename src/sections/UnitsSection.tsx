@@ -9,17 +9,82 @@ import {
   deleteUnit,
   STATUS_OPTIONS,
   REPLACEMENT_OPTIONS,
-  VENT_TYPES,
-  INSPECTION_TYPES,
   INSPECTION_INTERVALS,
   type Unit,
 } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/Field";
-import { SelectField } from "@/components/SelectField";
+import { SelectField, type SelectOption } from "@/components/SelectField";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 import { cn } from "@/lib/utils";
+
+const VENT_TYPE_LABELS: Record<string, string> = {
+  S: "S - Självdrag",
+  F: "F - Mekanisk frånluft",
+  FT: "FT - Mekanisk från- och tilluft",
+  FX: "FX - Mekanisk frånluft med återvinning",
+  FTX: "FTX - Mekanisk från- och tilluft med återvinning",
+};
+const VENT_TYPE_ORDER = ["S", "F", "FT", "FX", "FTX"] as const;
+
+const INSPECTION_TYPE_OPTIONS: SelectOption[] = [
+  { value: "FB", label: "FB - Första besiktning" },
+  { value: "ÅB", label: "ÅB - Återkommande besiktning" },
+  { value: "OB", label: "OB - Ombesiktning" },
+];
+
+const VERDICT_OPTIONS: SelectOption[] = [
+  { value: "G", label: "G - Godkänd" },
+  { value: "EG", label: "EG - Ej godkänd" },
+];
+
+// Vårdlokaler → 3 år oavsett ventilationstyp
+const CARE_FACILITY_KEYWORDS = [
+  "skola", "förskola", "forskola",
+  "vårdcentral", "vardcentral", "hälsocentral", "halsocentral", "jourcentral",
+  "äldreboende", "aldreboende", "säbo", "sabo", "särskilt boende", "sarskilt boende",
+  "lss", "gruppbostad", "servicebostad",
+  "tandläkar", "tandlakar", "tandvård", "tandvard",
+  "specialistläkar", "specialistlakar",
+  "korttidsboende", "växelboende", "vaxelboende", "korttidstillsyn",
+  "hvb", "behandlingshem",
+  "barnmorske", "barnavård", "barnavard", "bvc",
+  "psykatri", "psykiatri", "rättspsykiatri", "rattspsykiatri", "avgiftning",
+  "dialys", "dagvård", "dagvard", "dagverksamhet",
+  "rehab", "fysioterapi",
+  "hospice", "palliativ",
+  "laboratori", "provtagning",
+  "sterilcentral", "blodcentral",
+  "akutsjukhus", "lasarett", "sjukhus", "vårdlokal", "vardlokal",
+];
+function isCareFacility(business?: string) {
+  if (!business) return false;
+  const b = business.toLowerCase();
+  return CARE_FACILITY_KEYWORDS.some((k) => b.includes(k));
+}
+
+function parseAuthorizations(auth?: string) {
+  if (!auth) return { hasN: false, hasK: false };
+  return {
+    hasN: /\bN\b/i.test(auth),
+    hasK: /\bK\b/i.test(auth),
+  };
+}
+
+function intervalForVentType(vt?: string, care?: boolean): "3 år" | "6 år" | "" {
+  if (care) return "3 år";
+  if (vt === "FT" || vt === "FTX") return "3 år";
+  if (vt === "S" || vt === "F" || vt === "FX") return "6 år";
+  return "";
+}
+
+function addYears(dateStr: string, years: number): string {
+  const d = new Date(dateStr);
+  if (Number.isNaN(d.getTime())) return "";
+  d.setFullYear(d.getFullYear() + years);
+  return d.toISOString().slice(0, 10);
+}
 import {
   AlertDialog,
   AlertDialogAction,
