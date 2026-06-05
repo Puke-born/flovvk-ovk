@@ -208,7 +208,7 @@ export function UnitsSection({ inspectionId }: Props) {
   );
 }
 
-function UnitEditor({
+const UnitEditor = memo(function UnitEditor({
   unit,
   onDuplicate,
   onDelete,
@@ -233,7 +233,7 @@ function UnitEditor({
     600,
   );
 
-  const set = useCallback(<K extends keyof Unit>(k: K, v: Unit[K]) => {
+  const set = useCallback(<K extends keyof Unit,>(k: K, v: Unit[K]) => {
     setForm((f) => (Object.is(f[k], v) ? f : { ...f, [k]: v }));
   }, []);
   const handleGridChange = useCallback(
@@ -438,7 +438,7 @@ function UnitEditor({
       </Section>
     </Card>
   );
-}
+}, (prev, next) => prev.unit.id === next.unit.id);
 
 const GRID_ROWS = 30;
 const COL_LETTERS = ["H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T"];
