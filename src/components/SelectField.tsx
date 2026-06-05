@@ -106,7 +106,7 @@ export function SelectField({
         <SelectTrigger id={id} className="h-11 text-base">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
-        <SelectContent>
+        <SelectContent className="max-h-none">
           {allowEmpty && (
             <SelectItem value="__none__">
               <span className="text-muted-foreground">— inget valt —</span>
