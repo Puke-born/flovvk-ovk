@@ -37,7 +37,7 @@ function normalize(o: SelectOption) {
     : { value: o.value, label: o.label ?? o.value, disabled: !!o.disabled, disabledReason: o.disabledReason };
 }
 
-export function SelectField({
+export const SelectField = React.memo(function SelectField({
   label,
   value,
   onValueChange,
@@ -48,13 +48,44 @@ export function SelectField({
   allowCustom = false,
 }: SelectFieldProps) {
   const id = React.useId();
-  const opts = options.map(normalize);
-  const knownValues = new Set(opts.map((o) => o.value));
+  const opts = React.useMemo(() => options.map(normalize), [options]);
+  const knownValues = React.useMemo(() => new Set(opts.map((o) => o.value)), [opts]);
   const isCustomValue = allowCustom && !!value && !knownValues.has(value);
   const [customMode, setCustomMode] = React.useState(isCustomValue);
+  const [customDraft, setCustomDraft] = React.useState(value);
+  const valueRef = React.useRef(value);
+  const customDraftRef = React.useRef(customDraft);
+  const onValueChangeRef = React.useRef(onValueChange);
+
+  React.useEffect(() => {
+    onValueChangeRef.current = onValueChange;
+  }, [onValueChange]);
+
   React.useEffect(() => {
     if (isCustomValue) setCustomMode(true);
   }, [isCustomValue]);
+
+  React.useEffect(() => {
+    valueRef.current = value;
+    setCustomDraft((current) => (current === value ? current : value));
+  }, [value]);
+
+  const flushCustom = React.useCallback(() => {
+    const next = customDraftRef.current;
+    if (next !== valueRef.current) {
+      valueRef.current = next;
+      onValueChangeRef.current(next);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    customDraftRef.current = customDraft;
+    if (!allowCustom || !customMode || customDraft === valueRef.current) return;
+    const timeout = window.setTimeout(flushCustom, 300);
+    return () => window.clearTimeout(timeout);
+  }, [allowCustom, customDraft, customMode, flushCustom]);
+
+  React.useEffect(() => () => flushCustom(), [flushCustom]);
 
   if (allowCustom && customMode) {
     return (
@@ -66,8 +97,9 @@ export function SelectField({
           <Input
             id={id}
             className="h-11 text-base pr-10"
-            value={value}
-            onChange={(e) => onValueChange(e.target.value)}
+            value={customDraft}
+            onChange={(e) => setCustomDraft(e.target.value)}
+            onBlur={flushCustom}
             placeholder="Skriv egen text…"
             autoFocus={!isCustomValue}
           />
@@ -76,6 +108,9 @@ export function SelectField({
             aria-label="Visa lista"
             className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded hover:bg-accent text-muted-foreground"
             onClick={() => {
+              valueRef.current = "";
+              customDraftRef.current = "";
+              setCustomDraft("");
               onValueChange("");
               setCustomMode(false);
             }}
@@ -139,4 +174,4 @@ export function SelectField({
       </Select>
     </div>
   );
-}
+});

@@ -14,7 +14,7 @@ import {
 } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Field } from "@/components/Field";
+import { BufferedField } from "@/components/Field";
 import { SelectField, type SelectOption } from "@/components/SelectField";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 import { cn } from "@/lib/utils";
@@ -230,12 +230,14 @@ function UnitEditor({
       updateUnit(unit.id, patch);
     },
     [form],
-    400,
+    600,
   );
 
-  const set = <K extends keyof Unit>(k: K, v: Unit[K]) => setForm((f) => ({ ...f, [k]: v }));
+  const set = useCallback(<K extends keyof Unit>(k: K, v: Unit[K]) => {
+    setForm((f) => (Object.is(f[k], v) ? f : { ...f, [k]: v }));
+  }, []);
   const handleGridChange = useCallback(
-    (next: string[][]) => setForm((f) => ({ ...f, gridCells: next })),
+    (next: string[][]) => setForm((f) => (f.gridCells === next ? f : { ...f, gridCells: next })),
     [],
   );
 
@@ -247,7 +249,7 @@ function UnitEditor({
     ? "Besiktningsmannen saknar behörighet (N eller K krävs)"
     : "Kräver behörighet K — vald besiktningsman har endast N";
 
-  const ventOptions: SelectOption[] = VENT_TYPE_ORDER.map((v) => {
+  const ventOptions: SelectOption[] = useMemo(() => VENT_TYPE_ORDER.map((v) => {
     let disabled = false;
     let disabledReason: string | undefined;
     if (!anyAuth) {
@@ -258,7 +260,7 @@ function UnitEditor({
       disabledReason = authReason;
     }
     return { value: v, label: VENT_TYPE_LABELS[v], disabled, disabledReason };
-  });
+  }), [anyAuth, authReason, hasK]);
 
   const careFacility = isCareFacility(form.business);
 
@@ -332,17 +334,17 @@ function UnitEditor({
       </div>
 
       <Section title="System">
-        <Field
+        <BufferedField
           label="Systembeteckning *"
           value={form.systemDesignation}
-          onChange={(e) => set("systemDesignation", e.target.value)}
+          onValueChange={(v) => set("systemDesignation", v)}
           containerClassName="sm:col-span-2"
         />
-        <Field label="Aggregat" value={form.aggregate ?? ""} onChange={(e) => set("aggregate", e.target.value)} />
-        <Field
+        <BufferedField label="Aggregat" value={form.aggregate ?? ""} onValueChange={(v) => set("aggregate", v)} />
+        <BufferedField
           label="Aggregatplacering *"
           value={form.placement ?? ""}
-          onChange={(e) => set("placement", e.target.value)}
+          onValueChange={(v) => set("placement", v)}
         />
         <SelectField
           label="Typ av ventilation"
@@ -350,13 +352,13 @@ function UnitEditor({
           onValueChange={(v) => set("ventilationType", v)}
           options={ventOptions}
         />
-        <Field label="Antal lägenheter" value={form.apartmentCount ?? ""} onChange={(e) => set("apartmentCount", e.target.value)} />
-        <Field label="Drifttider" value={form.operatingHours ?? ""} onChange={(e) => set("operatingHours", e.target.value)} />
-        <Field label="Betjänad yta" value={form.servedArea ?? ""} onChange={(e) => set("servedArea", e.target.value)} />
-        <Field
+        <BufferedField label="Antal lägenheter" value={form.apartmentCount ?? ""} onValueChange={(v) => set("apartmentCount", v)} />
+        <BufferedField label="Drifttider" value={form.operatingHours ?? ""} onValueChange={(v) => set("operatingHours", v)} />
+        <BufferedField label="Betjänad yta" value={form.servedArea ?? ""} onValueChange={(v) => set("servedArea", v)} />
+        <BufferedField
           label="Verksamhet"
           value={form.business ?? ""}
-          onChange={(e) => set("business", e.target.value)}
+          onValueChange={(v) => set("business", v)}
           containerClassName="sm:col-span-2"
         />
       </Section>
@@ -375,31 +377,31 @@ function UnitEditor({
           options={INSPECTION_INTERVALS}
           allowEmpty={false}
         />
-        <Field
+        <BufferedField
           label="Besiktningsdatum"
           type="date"
           value={form.inspectionDate ?? ""}
-          onChange={(e) => set("inspectionDate", e.target.value)}
+          onValueChange={(v) => set("inspectionDate", v)}
         />
-        <Field
+        <BufferedField
           label="Ombesiktningsdag"
           type="date"
           value={form.inspectionType === "OB" ? (form.reInspectionDate ?? "") : ""}
-          onChange={(e) => set("reInspectionDate", e.target.value)}
+          onValueChange={(v) => set("reInspectionDate", v)}
           disabled={form.inspectionType !== "OB"}
           title={form.inspectionType !== "OB" ? "Välj 'OB' (ombesiktning) som typ för att aktivera" : undefined}
         />
-        <Field
+        <BufferedField
           label="Nästa ord. besiktning"
           type="date"
           value={form.nextOrdinaryDate ?? ""}
-          onChange={(e) => set("nextOrdinaryDate", e.target.value)}
+          onValueChange={(v) => set("nextOrdinaryDate", v)}
         />
-        <Field
+        <BufferedField
           label="Föregående besiktning"
           type="date"
           value={form.previousInspectionDate ?? ""}
-          onChange={(e) => set("previousInspectionDate", e.target.value)}
+          onValueChange={(v) => set("previousInspectionDate", v)}
         />
       </Section>
 
@@ -444,6 +446,7 @@ const COL_WIDTHS = [29, 71, 64, 64, 26, 23, 12, 15, 13, 31, 20, 25, 27];
 const ROW_NUM_WIDTH = 32;
 const ROW_HEIGHT = 17;
 const NAV_COLS = COL_WIDTHS.map((_, i) => i);
+const GRID_ROW_INDEXES = Array.from({ length: GRID_ROWS }, (_, r) => r);
 
 function navIndex(c: number) {
   return c;
@@ -458,6 +461,180 @@ function cellWidth(c: number) {
 
 type Cell = { r: number; c: number };
 
+const sameCell = (a: Cell, b: Cell) => a.r === b.r && a.c === b.c;
+const clampCell = (r: number, c: number): Cell => ({
+  r: Math.max(0, Math.min(GRID_ROWS - 1, r)),
+  c: Math.max(0, Math.min(COL_WIDTHS.length - 1, c)),
+});
+
+const GridColumnHeader = memo(function GridColumnHeader({ label, active }: { label: string; active: boolean }) {
+  return (
+    <th
+      className={cn(
+        "sticky top-0 z-10 text-center font-semibold",
+        active ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
+      )}
+      style={{ border: "1px solid black", height: ROW_HEIGHT }}
+    >
+      {label}
+    </th>
+  );
+});
+
+const GridRowHeader = memo(function GridRowHeader({ row, active }: { row: number; active: boolean }) {
+  return (
+    <th
+      className={cn(
+        "sticky left-0 z-10 text-right pr-1 font-semibold",
+        active ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
+      )}
+      style={{ border: "1px solid black", height: ROW_HEIGHT }}
+    >
+      {row + 21}
+    </th>
+  );
+});
+
+const GridCellEditor = memo(function GridCellEditor({
+  initialValue,
+  column,
+  onCommit,
+  onCancel,
+  onMoveAfterCommit,
+}: {
+  initialValue: string;
+  column: number;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+  onMoveAfterCommit: (dr: number, dc: -1 | 0 | 1) => void;
+}) {
+  const [draft, setDraft] = useState(initialValue);
+  const inputRef = useRef<HTMLInputElement>(null);
+  const closedRef = useRef(false);
+
+  useEffect(() => {
+    inputRef.current?.focus();
+    inputRef.current?.select();
+  }, []);
+
+  const commit = useCallback(() => {
+    if (closedRef.current) return;
+    closedRef.current = true;
+    onCommit(draft);
+  }, [draft, onCommit]);
+
+  return (
+    <input
+      ref={inputRef}
+      type="text"
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+          onMoveAfterCommit(1, 0);
+        } else if (e.key === "Tab") {
+          e.preventDefault();
+          commit();
+          onMoveAfterCommit(0, e.shiftKey ? -1 : 1);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          closedRef.current = true;
+          onCancel();
+        }
+      }}
+      onBlur={commit}
+      className="absolute top-0 left-0 h-full px-1 text-xs leading-none bg-background text-foreground z-30 focus:outline-none"
+      style={{
+        minWidth: "100%",
+        width: `max(100%, ${Math.max(cellWidth(column), draft.length * 7 + 16)}px)`,
+        border: "2px solid hsl(var(--primary))",
+        height: ROW_HEIGHT,
+      }}
+    />
+  );
+});
+
+const GridCell = memo(function GridCell({
+  row,
+  column,
+  value,
+  maxWidth,
+  active,
+  editing,
+  editInitial,
+  activeRef,
+  onSelect,
+  onStartEdit,
+  onCancelEdit,
+  onCommitCell,
+  onMoveAfterCommit,
+}: {
+  row: number;
+  column: number;
+  value: string;
+  maxWidth: number;
+  active: boolean;
+  editing: boolean;
+  editInitial: string | null;
+  activeRef: React.Ref<HTMLTableCellElement> | undefined;
+  onSelect: (r: number, c: number) => void;
+  onStartEdit: (r: number, c: number) => void;
+  onCancelEdit: () => void;
+  onCommitCell: (r: number, c: number, v: string) => void;
+  onMoveAfterCommit: (dr: number, dc: -1 | 0 | 1) => void;
+}) {
+  const hideBottom = row % 2 === 0;
+  const hideTop = row % 2 === 1;
+  const hideLeft = column >= 2 && column <= 11;
+  const hideRight = column >= 1 && column <= 10;
+
+  const handleSelect = useCallback((e: React.MouseEvent) => {
+    e.preventDefault();
+    if (!active || !editing) onSelect(row, column);
+  }, [active, column, editing, onSelect, row]);
+  const handleStartEdit = useCallback(() => onStartEdit(row, column), [column, onStartEdit, row]);
+  const handleCommit = useCallback((next: string) => onCommitCell(row, column, next), [column, onCommitCell, row]);
+
+  return (
+    <td
+      ref={activeRef}
+      onMouseDown={handleSelect}
+      onDoubleClick={handleStartEdit}
+      className="p-0 relative"
+      style={{
+        borderLeft: hideLeft ? "none" : "1px solid black",
+        borderRight: hideRight ? "none" : "1px solid black",
+        borderTop: hideTop ? "none" : "1px solid black",
+        borderBottom: hideBottom ? "none" : "1px solid black",
+        height: ROW_HEIGHT,
+        overflow: "visible",
+        boxShadow: active && !editing ? "inset 0 0 0 2px hsl(var(--primary))" : undefined,
+        background: "hsl(var(--background))",
+      }}
+    >
+      {active && editing ? (
+        <GridCellEditor
+          initialValue={editInitial ?? value}
+          column={column}
+          onCommit={handleCommit}
+          onCancel={onCancelEdit}
+          onMoveAfterCommit={onMoveAfterCommit}
+        />
+      ) : (
+        <div
+          aria-hidden
+          className="absolute top-0 left-0 px-1 text-xs leading-none whitespace-nowrap pointer-events-none text-foreground overflow-hidden"
+          style={{ height: ROW_HEIGHT, lineHeight: `${ROW_HEIGHT}px`, maxWidth, zIndex: 1 }}
+        >
+          {value}
+        </div>
+      )}
+    </td>
+  );
+});
+
 const RemarksGrid = memo(function RemarksGrid({
   value,
   onChange,
@@ -467,82 +644,87 @@ const RemarksGrid = memo(function RemarksGrid({
 }) {
   const [active, setActive] = useState<Cell>({ r: 0, c: 0 });
   const [editing, setEditing] = useState(false);
-  const [draft, setDraft] = useState("");
+  const [editInitial, setEditInitial] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const activeTdRef = useRef<HTMLTableCellElement>(null);
+  const valueRef = useRef(value);
+  valueRef.current = value;
 
-  const getCell = (r: number, c: number) => value?.[r]?.[c] ?? "";
+  const getCell = useCallback((r: number, c: number) => valueRef.current?.[r]?.[c] ?? "", []);
 
-  // Prefill defaults bara om gridCells är helt tomt (nytt aggregat utan data).
   useEffect(() => {
     if (value !== undefined) return;
     onChange([[], ["", "Märkeffekt:"], [], ["", "Luftmängd:"]]);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const writeCells = (updates: Array<{ r: number; c: number; v: string }>) => {
-    const next: string[][] = (value ?? []).map((row) => [...(row ?? [])]);
+  const writeCells = useCallback((updates: Array<{ r: number; c: number; v: string }>) => {
+    const next: string[][] = (valueRef.current ?? []).map((row) => [...(row ?? [])]);
+    let changed = false;
     for (const { r, c, v } of updates) {
-      if (r < 0 || r >= GRID_ROWS) continue;
+      if (r < 0 || r >= GRID_ROWS || c < 0 || c >= COL_WIDTHS.length) continue;
       while (next.length <= r) next.push([]);
       const row = [...(next[r] ?? [])];
       while (row.length <= c) row.push("");
+      if ((row[c] ?? "") === v) continue;
       row[c] = v;
       next[r] = row;
+      changed = true;
     }
-    onChange(next);
-  };
-  const setCell = (r: number, c: number, v: string) => writeCells([{ r, c, v }]);
+    if (changed) onChange(next);
+  }, [onChange]);
 
+  const setCell = useCallback((r: number, c: number, v: string) => writeCells([{ r, c, v }]), [writeCells]);
 
-  const commitDraft = () => {
-    setCell(active.r, active.c, draft);
+  const cancelEdit = useCallback(() => {
     setEditing(false);
-  };
-  const cancelEdit = () => setEditing(false);
+    setEditInitial(null);
+  }, []);
 
-  const moveTo = (r: number, c: number) => {
-    setActive({
-      r: Math.max(0, Math.min(GRID_ROWS - 1, r)),
-      c: NAV_COLS.includes(c) ? c : NAV_COLS[navIndex(c)],
+  const selectCell = useCallback((r: number, c: number) => {
+    const next = clampCell(r, c);
+    setActive((current) => (sameCell(current, next) ? current : next));
+    setEditing(false);
+    setEditInitial(null);
+    containerRef.current?.focus();
+  }, []);
+
+  const startEditCell = useCallback((r: number, c: number) => {
+    setActive(clampCell(r, c));
+    setEditInitial(null);
+    setEditing(true);
+  }, []);
+
+  const commitCell = useCallback((r: number, c: number, v: string) => {
+    setCell(r, c, v);
+    setEditing(false);
+    setEditInitial(null);
+  }, [setCell]);
+
+  const moveTo = useCallback((r: number, c: number) => {
+    const next = clampCell(r, c);
+    setActive((current) => (sameCell(current, next) ? current : next));
+    setEditing(false);
+    setEditInitial(null);
+  }, []);
+
+  const move = useCallback((dr: number, dc: -1 | 0 | 1) => {
+    setActive((current) => {
+      const nc = dc === 0 ? current.c : nextNavCol(current.c, dc);
+      const next = clampCell(current.r + dr, nc);
+      return sameCell(current, next) ? current : next;
     });
     setEditing(false);
-  };
-  const move = (dr: number, dc: -1 | 0 | 1) => {
-    const nc = dc === 0 ? active.c : nextNavCol(active.c, dc);
-    moveTo(active.r + dr, nc);
-  };
+    setEditInitial(null);
+  }, []);
 
-  const startEdit = (initial?: string) => {
-    setDraft(initial !== undefined ? initial : getCell(active.r, active.c));
+  const startEdit = useCallback((initial?: string) => {
+    setEditInitial(initial ?? null);
     setEditing(true);
-  };
+  }, []);
 
-  const refocusContainer = () => {
-    // Defer so React finishes unmounting the input first.
-    setTimeout(() => containerRef.current?.focus(), 0);
-  };
-
-  const onKeyDown = (e: React.KeyboardEvent) => {
-    if (editing) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        commitDraft();
-        move(1, 0);
-        refocusContainer();
-      } else if (e.key === "Escape") {
-        e.preventDefault();
-        cancelEdit();
-        refocusContainer();
-      } else if (e.key === "Tab") {
-        e.preventDefault();
-        commitDraft();
-        move(0, e.shiftKey ? -1 : 1);
-        refocusContainer();
-      }
-      return;
-    }
+  const onKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (editing) return;
     const meta = e.ctrlKey || e.metaKey;
     switch (e.key) {
       case "ArrowUp":
@@ -596,20 +778,22 @@ const RemarksGrid = memo(function RemarksGrid({
       e.preventDefault();
       startEdit(e.key);
     }
-  };
+  }, [active.c, active.r, editing, move, moveTo, setCell, startEdit]);
 
-  const onCopy = (e: React.ClipboardEvent) => {
+  const onCopy = useCallback((e: React.ClipboardEvent) => {
     if (editing) return;
     e.preventDefault();
     e.clipboardData.setData("text/plain", getCell(active.r, active.c));
-  };
-  const onCut = (e: React.ClipboardEvent) => {
+  }, [active.c, active.r, editing, getCell]);
+
+  const onCut = useCallback((e: React.ClipboardEvent) => {
     if (editing) return;
     e.preventDefault();
     e.clipboardData.setData("text/plain", getCell(active.r, active.c));
     setCell(active.r, active.c, "");
-  };
-  const onPaste = (e: React.ClipboardEvent) => {
+  }, [active.c, active.r, editing, getCell, setCell]);
+
+  const onPaste = useCallback((e: React.ClipboardEvent) => {
     if (editing) return;
     const text = e.clipboardData.getData("text/plain");
     if (!text) return;
@@ -618,31 +802,17 @@ const RemarksGrid = memo(function RemarksGrid({
       const matrix = text.replace(/\r/g, "").split("\n").map((l) => l.split("\t"));
       const updates: Array<{ r: number; c: number; v: string }> = [];
       matrix.forEach((row, dr) => {
-        row.forEach((v, dc) => {
-          const c = active.c + dc;
-          if (c >= COL_WIDTHS.length) return;
-          updates.push({ r: active.r + dr, c, v });
-        });
+        row.forEach((v, dc) => updates.push({ r: active.r + dr, c: active.c + dc, v }));
       });
       writeCells(updates);
     } else {
       setCell(active.r, active.c, text);
     }
-  };
+  }, [active.c, active.r, editing, setCell, writeCells]);
 
-
-  // Autoscroll active cell into view
   useEffect(() => {
     activeTdRef.current?.scrollIntoView({ block: "nearest", inline: "nearest" });
   }, [active]);
-
-  // Focus + select on edit start
-  useEffect(() => {
-    if (editing && inputRef.current) {
-      inputRef.current.focus();
-      inputRef.current.select();
-    }
-  }, [editing]);
 
   const overflowWidth = useMemo(() => {
     const nCols = COL_WIDTHS.length;
@@ -660,90 +830,6 @@ const RemarksGrid = memo(function RemarksGrid({
     }
     return grid;
   }, [value]);
-
-  const renderCell = (r: number, c: number) => {
-    const isActive = active.r === r && active.c === c;
-    const val = getCell(r, c);
-    const maxW = overflowWidth[r][c];
-
-
-
-    // Pair rows visually: 21-22, 23-24, ... (no border between pair members)
-    const hideBottom = r % 2 === 0;
-    const hideTop = r % 2 === 1;
-    // Remove internal borders between I (1) and S (11) — they act as one wide area.
-    const hideLeft = c >= 2 && c <= 11;
-    const hideRight = c >= 1 && c <= 10;
-
-    return (
-      <td
-        key={c}
-        ref={isActive ? activeTdRef : undefined}
-        onMouseDown={(e) => {
-          e.preventDefault();
-          if (!(isActive && editing)) {
-            setActive({ r, c });
-            setEditing(false);
-            containerRef.current?.focus();
-          }
-        }}
-        onDoubleClick={() => {
-          setActive({ r, c });
-          setDraft(getCell(r, c));
-          setEditing(true);
-        }}
-        className="p-0 relative"
-        style={{
-          borderLeft: hideLeft ? "none" : "1px solid black",
-          borderRight: hideRight ? "none" : "1px solid black",
-          borderTop: hideTop ? "none" : "1px solid black",
-          borderBottom: hideBottom ? "none" : "1px solid black",
-
-          height: ROW_HEIGHT,
-          overflow: "visible",
-          boxShadow: isActive && !editing ? "inset 0 0 0 2px hsl(var(--primary))" : undefined,
-          background: "hsl(var(--background))",
-        }}
-      >
-
-        {!(isActive && editing) && (
-          <div
-            aria-hidden
-            className="absolute top-0 left-0 px-1 text-xs leading-none whitespace-nowrap pointer-events-none text-foreground overflow-hidden"
-            style={{
-              height: ROW_HEIGHT,
-              lineHeight: `${ROW_HEIGHT}px`,
-              maxWidth: maxW,
-              zIndex: 1,
-            }}
-          >
-            {val}
-          </div>
-        )}
-        {isActive && editing && (
-          <input
-            ref={inputRef}
-            type="text"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={() => {
-              if (editing) {
-                setCell(r, c, draft);
-                setEditing(false);
-              }
-            }}
-            className="absolute top-0 left-0 h-full px-1 text-xs leading-none bg-background text-foreground z-30 focus:outline-none"
-            style={{
-              minWidth: "100%",
-              width: `max(100%, ${Math.max(cellWidth(c), draft.length * 7 + 16)}px)`,
-              border: "2px solid hsl(var(--primary))",
-              height: ROW_HEIGHT,
-            }}
-          />
-        )}
-      </td>
-    );
-  };
 
   return (
     <div
@@ -764,41 +850,37 @@ const RemarksGrid = memo(function RemarksGrid({
         </colgroup>
         <thead>
           <tr style={{ height: ROW_HEIGHT }}>
-            <th
-              className="sticky left-0 top-0 z-20 bg-muted"
-              style={{ border: "1px solid black", height: ROW_HEIGHT }}
-            />
-            {COL_LETTERS.map((l, i) => {
-              const highlight = active.c === i;
-
-              return (
-                <th
-                  key={i}
-                  className={cn(
-                    "sticky top-0 z-10 text-center font-semibold",
-                    highlight ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
-                  )}
-                  style={{ border: "1px solid black", height: ROW_HEIGHT }}
-                >
-                  {l}
-                </th>
-              );
-            })}
+            <th className="sticky left-0 top-0 z-20 bg-muted" style={{ border: "1px solid black", height: ROW_HEIGHT }} />
+            {COL_LETTERS.map((label, column) => (
+              <GridColumnHeader key={label} label={label} active={active.c === column} />
+            ))}
           </tr>
         </thead>
         <tbody>
-          {Array.from({ length: GRID_ROWS }, (_, r) => (
-            <tr key={r} style={{ height: ROW_HEIGHT }}>
-              <th
-                className={cn(
-                  "sticky left-0 z-10 text-right pr-1 font-semibold",
-                  active.r === r ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground",
-                )}
-                style={{ border: "1px solid black", height: ROW_HEIGHT }}
-              >
-                {r + 21}
-              </th>
-              {NAV_COLS.map((c) => renderCell(r, c))}
+          {GRID_ROW_INDEXES.map((row) => (
+            <tr key={row} style={{ height: ROW_HEIGHT }}>
+              <GridRowHeader row={row} active={active.r === row} />
+              {NAV_COLS.map((column) => {
+                const isActive = active.r === row && active.c === column;
+                return (
+                  <GridCell
+                    key={column}
+                    row={row}
+                    column={column}
+                    value={value?.[row]?.[column] ?? ""}
+                    maxWidth={overflowWidth[row][column]}
+                    active={isActive}
+                    editing={isActive && editing}
+                    editInitial={isActive ? editInitial : null}
+                    activeRef={isActive ? activeTdRef : undefined}
+                    onSelect={selectCell}
+                    onStartEdit={startEditCell}
+                    onCancelEdit={cancelEdit}
+                    onCommitCell={commitCell}
+                    onMoveAfterCommit={move}
+                  />
+                );
+              })}
             </tr>
           ))}
         </tbody>

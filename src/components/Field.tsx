@@ -24,6 +24,63 @@ export function Field({ label, hint, containerClassName, className, id, ...rest 
   );
 }
 
+type BufferedFieldProps = Omit<FieldProps, "value" | "onChange"> & {
+  value: string;
+  onValueChange: (value: string) => void;
+  debounceMs?: number;
+};
+
+export const BufferedField = React.memo(function BufferedField({
+  value,
+  onValueChange,
+  debounceMs = 300,
+  onBlur,
+  ...props
+}: BufferedFieldProps) {
+  const [draft, setDraft] = React.useState(value);
+  const draftRef = React.useRef(draft);
+  const valueRef = React.useRef(value);
+  const onValueChangeRef = React.useRef(onValueChange);
+
+  React.useEffect(() => {
+    onValueChangeRef.current = onValueChange;
+  }, [onValueChange]);
+
+  React.useEffect(() => {
+    valueRef.current = value;
+    setDraft((current) => (current === value ? current : value));
+  }, [value]);
+
+  const flush = React.useCallback(() => {
+    const next = draftRef.current;
+    if (next !== valueRef.current) {
+      valueRef.current = next;
+      onValueChangeRef.current(next);
+    }
+  }, []);
+
+  React.useEffect(() => {
+    draftRef.current = draft;
+    if (draft === valueRef.current) return;
+    const timeout = window.setTimeout(flush, debounceMs);
+    return () => window.clearTimeout(timeout);
+  }, [debounceMs, draft, flush]);
+
+  React.useEffect(() => () => flush(), [flush]);
+
+  return (
+    <Field
+      {...props}
+      value={draft}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={(e) => {
+        flush();
+        onBlur?.(e);
+      }}
+    />
+  );
+});
+
 interface TextAreaFieldProps extends React.TextareaHTMLAttributes<HTMLTextAreaElement> {
   label: string;
   containerClassName?: string;
