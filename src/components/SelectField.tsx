@@ -59,29 +59,30 @@ export function SelectField({
   if (allowCustom && customMode) {
     return (
       <div className={cn("flex flex-col gap-1.5", containerClassName)}>
-        <div className="flex items-center justify-between">
-          <Label htmlFor={id} className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-            {label}
-          </Label>
+        <Label htmlFor={id} className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {label}
+        </Label>
+        <div className="relative">
+          <Input
+            id={id}
+            className="h-11 text-base pr-10"
+            value={value}
+            onChange={(e) => onValueChange(e.target.value)}
+            placeholder="Skriv egen text…"
+            autoFocus={!isCustomValue}
+          />
           <button
             type="button"
-            className="text-[10px] text-muted-foreground hover:text-foreground"
+            aria-label="Visa lista"
+            className="absolute right-2 top-1/2 -translate-y-1/2 inline-flex h-7 w-7 items-center justify-center rounded hover:bg-accent text-muted-foreground"
             onClick={() => {
               onValueChange("");
               setCustomMode(false);
             }}
           >
-            Lista
+            <ChevronDown className="h-4 w-4" />
           </button>
         </div>
-        <Input
-          id={id}
-          className="h-11 text-base"
-          value={value}
-          onChange={(e) => onValueChange(e.target.value)}
-          placeholder="Skriv egen text…"
-          autoFocus={!isCustomValue}
-        />
       </div>
     );
   }
