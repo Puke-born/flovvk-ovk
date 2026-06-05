@@ -39,9 +39,16 @@ const VERDICT_OPTIONS: SelectOption[] = [
   { value: "EG", label: "EG - Ej godkänd" },
 ];
 
-// Vårdlokaler → 3 år oavsett ventilationstyp
+// Vårdlokaler & skol-/utbildningslokaler → 3 år oavsett ventilationstyp
 const CARE_FACILITY_KEYWORDS = [
-  "skola", "förskola", "forskola",
+  // Skol- och utbildningsverksamhet
+  "skola", "skolor", "förskola", "forskola", "fritidshem", "fritids",
+  "universitet", "högskola", "hogskola", "lärosäte", "larosate",
+  "komvux", "vuxenutbildning", "yrkeshögskola", "yrkeshogskola",
+  "folkhögskola", "folkhogskola", "kulturskola", "musikskola",
+  "naturbruksgymnasi", "sfi", "lägergård", "lagergard", "naturskola",
+  "föreläsningssal", "forelasningssal", "undervisningslokal", "studentlaboratori",
+  // Vårdlokaler
   "vårdcentral", "vardcentral", "hälsocentral", "halsocentral", "jourcentral",
   "äldreboende", "aldreboende", "säbo", "sabo", "särskilt boende", "sarskilt boende",
   "lss", "gruppbostad", "servicebostad",
