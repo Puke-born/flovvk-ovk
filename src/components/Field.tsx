@@ -72,7 +72,10 @@ export const BufferedField = React.memo(function BufferedField({
     <Field
       {...props}
       value={draft}
-      onChange={(e) => setDraft(e.target.value)}
+      onChange={(e) => {
+        draftRef.current = e.target.value;
+        setDraft(e.target.value);
+      }}
       onBlur={(e) => {
         flush();
         onBlur?.(e);

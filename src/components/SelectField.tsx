@@ -98,7 +98,10 @@ export const SelectField = React.memo(function SelectField({
             id={id}
             className="h-11 text-base pr-10"
             value={customDraft}
-            onChange={(e) => setCustomDraft(e.target.value)}
+            onChange={(e) => {
+              customDraftRef.current = e.target.value;
+              setCustomDraft(e.target.value);
+            }}
             onBlur={flushCustom}
             placeholder="Skriv egen text…"
             autoFocus={!isCustomValue}
