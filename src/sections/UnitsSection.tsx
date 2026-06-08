@@ -626,6 +626,7 @@ const GridCell = memo(function GridCell({
       {active && editing ? (
         <GridCellEditor
           initialValue={editInitial ?? value}
+          selectOnFocus={editInitial === null}
           column={column}
           onCommit={handleCommit}
           onCancel={onCancelEdit}
