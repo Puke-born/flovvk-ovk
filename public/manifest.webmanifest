@@ -1,7 +1,7 @@
 {
-  "name": "OVK Besiktning",
-  "short_name": "OVK",
-  "description": "OVK-besiktningsapp för surfplatta – inmatning, intyg och PDF-export.",
+  "name": "FLOVVK – Protokoll & ventilationskontroll",
+  "short_name": "FLOVVK",
+  "description": "FLOVVK – app för ventilationskontroll på surfplatta: inmatning, intyg och PDF-export.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

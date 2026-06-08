@@ -27,7 +27,7 @@ export default function InstallPage() {
       <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
         <div className="text-center">
           <Smartphone className="mx-auto h-12 w-12 text-primary mb-3" />
-          <h1 className="text-3xl font-bold">Installera OVK på surfplattan</h1>
+          <h1 className="text-3xl font-bold">Installera FLOVVK på surfplattan</h1>
           <p className="text-muted-foreground mt-2">
             Få en ikon på hemskärmen och kör appen i helskärm – precis som en vanlig app.
           </p>
