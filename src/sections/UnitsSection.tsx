@@ -497,12 +497,14 @@ const GridRowHeader = memo(function GridRowHeader({ row, active }: { row: number
 
 const GridCellEditor = memo(function GridCellEditor({
   initialValue,
+  selectOnFocus,
   column,
   onCommit,
   onCancel,
   onMoveAfterCommit,
 }: {
   initialValue: string;
+  selectOnFocus: boolean;
   column: number;
   onCommit: (value: string) => void;
   onCancel: () => void;
@@ -513,9 +515,16 @@ const GridCellEditor = memo(function GridCellEditor({
   const closedRef = useRef(false);
 
   useEffect(() => {
-    inputRef.current?.focus();
-    inputRef.current?.select();
-  }, []);
+    const el = inputRef.current;
+    if (!el) return;
+    el.focus();
+    if (selectOnFocus) {
+      el.select();
+    } else {
+      const end = el.value.length;
+      el.setSelectionRange(end, end);
+    }
+  }, [selectOnFocus]);
 
   const commit = useCallback(() => {
     if (closedRef.current) return;
@@ -617,6 +626,7 @@ const GridCell = memo(function GridCell({
       {active && editing ? (
         <GridCellEditor
           initialValue={editInitial ?? value}
+          selectOnFocus={editInitial === null}
           column={column}
           onCommit={handleCommit}
           onCancel={onCancelEdit}
