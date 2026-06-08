@@ -155,17 +155,15 @@ export const SelectField = React.memo(function SelectField({
               key={o.value}
               value={o.value}
               disabled={o.disabled}
-              className="text-base py-3"
+              className={cn("text-base py-3", o.disabled && "text-muted-foreground")}
               title={o.disabled ? o.disabledReason : undefined}
             >
-              <span className={o.disabled ? "text-muted-foreground" : undefined}>
-                {o.label}
-                {o.disabled && o.disabledReason ? (
-                  <span className="block text-[11px] text-muted-foreground/80 mt-0.5">
-                    {o.disabledReason}
-                  </span>
-                ) : null}
-              </span>
+              {o.label}
+              {o.disabled && o.disabledReason ? (
+                <span className="block text-[11px] text-muted-foreground/80 mt-0.5">
+                  {o.disabledReason}
+                </span>
+              ) : null}
             </SelectItem>
           ))}
           {allowCustom && (
