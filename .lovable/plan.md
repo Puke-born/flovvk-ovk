@@ -1,26 +1,26 @@
-## Problem
+## Plan: Byt namn till FLOVVK
 
-Varje knapptryck i ett fält uppdaterar `form` i `UnitEditor`, vilket re-renderar hela editorn — inklusive `RemarksGrid` med 30×13 ≈ 390 celler. Varje cell gör dessutom en liten O(n)-loop för att räkna ut overflow-bredd, plus en absolut-positionerad overlay-div. Det är den dominerande kostnaden bakom lagget vid skrivning, dropdown-öppning och scroll (eftersom React commit + layout sker på varje tangent).
+### 1. Ladda upp logotypen som CDN-asset
 
-## Åtgärder (endast presentation/perf, ingen funktionsändring)
+- Ladda upp `Flovvk.png` via `lovable-assets create` → `src/assets/flovvk-logo.png.asset.json`.
 
-1. **Memoize `RemarksGrid`** med `React.memo`. Eftersom `value` (gridCells) bara byts när själva rutnätet ändras, kommer skrivning i andra fält inte längre att re-rendera 390 celler.
+### 2. Header (`src/components/AppShell.tsx`)
 
-2. **Stabilisera `onChange`** som skickas in till `RemarksGrid` via `useCallback`, så memo-jämförelsen faktiskt håller. Använd `setForm(f => ...)` istället för att läsa `form` i closure.
+- Ersätt den blå "OVK"-rutan + texten "Besiktning" med `<img>` som visar FLOVVK-logotypen.
+- Sätt lämplig höjd (ca 32–40 px) så den passar i headern, med `alt="FLOVVK"`.
 
-3. **Förberäkna "tomma kolumner från höger" per rad** en gång per render av grid (en array `emptyRight[r][c]`) istället för att loopa inuti varje `renderCell`. Tar bort 390 små loopar.
+### 3. Textuella förekomster → "FLOVVK"
 
-4. **Memoize `renderCell`-resultatet per rad** är overkill — räcker med (1)+(3). Behåll övrig logik som den är.
+- `index.html`: `<title>`, meta description, author, `apple-mobile-web-app-title`, `og:title`, `og:description` → använd "FLOVVK – Protokoll & ventilationskontroll" / motsvarande.
+- `public/manifest.webmanifest`: `name`, `short_name`, `description`.
+- `src/pages/Home.tsx`: rubrik "OVK-besiktningar" → "FLOVVK – besiktningar" (behåller betydelsen).
+- `src/pages/InstallPage.tsx`: "Installera OVK på surfplattan" → "Installera FLOVVK på surfplattan".
+- `src/sections/IntygView.tsx`: behåll "OVK – Obligatorisk ventilationskontroll" eftersom det är den juridiska benämningen på själva intyget (inte appnamnet). 
 
-5. **Mindre re-render i UnitEditor**: bryt ut `Section`-innehållen som behöver det inte — det räcker att grid är memo'd, eftersom Field/SelectField är billiga. Inga ändringar i Field/SelectField.
+### 4. Verifiera
 
-6. **Scrollag**: när grid inte längre re-renderar på varje tangent försvinner även scroll-jank (browsern slipper layouta om 390 celler). Inga övriga scroll-ändringar.
+- Visuell kontroll i preview att logotypen renderas snyggt i headern på både desktop och mobil.
 
-## Tekniska detaljer
+### Frågor
 
-Fil: `src/sections/UnitsSection.tsx`
-
-- Wrap exporten: `const RemarksGrid = memo(function RemarksGridImpl({...}) {...})` med default shallow compare (value- och onChange-referens).
-- I `UnitEditor`: `const handleGridChange = useCallback((next) => setForm(f => ({...f, gridCells: next})), [])`.
-- I `RemarksGrid` render: bygg `const emptyRight = useMemo(...)` som för varje (r,c) säger hur många efterföljande tomma kolumner som finns; använd i `renderCell` istället för loopen.
-- Behåll all befintlig navigering, redigering, copy/paste, kantlinjelogik och styling oförändrad.
+- IntygView-rubriken ("OVK – Obligatorisk ventilationskontroll") är en officiell term — ska den vara kvar eller också bytas? Svar: den ska vara kvar.
