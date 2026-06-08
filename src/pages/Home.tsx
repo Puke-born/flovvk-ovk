@@ -43,7 +43,7 @@ export default function Home() {
       <div className="max-w-4xl mx-auto px-4 py-6 sm:py-10 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">OVK-besiktningar</h1>
+            <h1 className="text-3xl sm:text-4xl font-bold tracking-tight">FLOVVK – besiktningar</h1>
             <p className="text-muted-foreground mt-1">Skapa, fyll i och exportera intyg & protokoll.</p>
           </div>
           <Button onClick={startNew} size="lg" className="touch-button h-14 text-base px-6">

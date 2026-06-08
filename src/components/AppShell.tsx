@@ -1,6 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Settings, Home as HomeIcon, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
+import flovvkLogo from "@/assets/flovvk-logo.png.asset.json";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -14,11 +15,12 @@ export function AppShell({ children, title, right }: AppShellProps) {
     <div className="min-h-screen flex flex-col bg-background">
       <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 no-print">
         <div className="flex items-center gap-3 px-4 h-14 sm:h-16">
-          <Link to="/" className="flex items-center gap-2 font-bold text-primary text-lg shrink-0">
-            <span className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-primary text-primary-foreground">
-              OVK
-            </span>
-            <span className="hidden sm:inline text-foreground">Besiktning</span>
+          <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="FLOVVK">
+            <img
+              src={flovvkLogo.url}
+              alt="FLOVVK – Protokoll & ventilationskontroll"
+              className="h-9 sm:h-10 w-auto"
+            />
           </Link>
           <div className="flex-1 min-w-0 truncate text-sm sm:text-base font-medium text-muted-foreground">
             {title}
