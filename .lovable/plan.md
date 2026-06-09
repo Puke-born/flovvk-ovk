@@ -1,26 +1,40 @@
-## Plan: Byt namn till FLOVVK
+## Bakgrund
 
-### 1. Ladda upp logotypen som CDN-asset
+All data sparas redan lokalt i IndexedDB (via Dexie, databasen `ovk-app`). Stänger du webbläsaren ligger besiktningar, enheter, kontakter, besiktningsmän, byggnadsnormer och Excel-mallen kvar.
 
-- Ladda upp `Flovvk.png` via `lovable-assets create` → `src/assets/flovvk-logo.png.asset.json`.
+Det som *inte* fungerar idag är att starta appen utan internet — själva app-filerna (HTML/JS/CSS) hämtas från servern varje gång. Det är därför du upplever att offline-stödet inte är klart.
 
-### 2. Header (`src/components/AppShell.tsx`)
+## Mål
 
-- Ersätt den blå "OVK"-rutan + texten "Besiktning" med `<img>` som visar FLOVVK-logotypen.
-- Sätt lämplig höjd (ca 32–40 px) så den passar i headern, med `alt="FLOVVK"`.
+Appen ska kunna öppnas och användas utan internetuppkoppling, både i webbläsaren och som installerad app på surfplattan. Befintlig data i IndexedDB ändras inte.
 
-### 3. Textuella förekomster → "FLOVVK"
+## Plan
 
-- `index.html`: `<title>`, meta description, author, `apple-mobile-web-app-title`, `og:title`, `og:description` → använd "FLOVVK – Protokoll & ventilationskontroll" / motsvarande.
-- `public/manifest.webmanifest`: `name`, `short_name`, `description`.
-- `src/pages/Home.tsx`: rubrik "OVK-besiktningar" → "FLOVVK – besiktningar" (behåller betydelsen).
-- `src/pages/InstallPage.tsx`: "Installera OVK på surfplattan" → "Installera FLOVVK på surfplattan".
-- `src/sections/IntygView.tsx`: behåll "OVK – Obligatorisk ventilationskontroll" eftersom det är den juridiska benämningen på själva intyget (inte appnamnet). 
+1. **Lägg till `vite-plugin-pwa`** med `generateSW` och `registerType: "autoUpdate"`.
+   - Pre-cacha hela app-skalet (HTML, JS, CSS, ikoner, fonter).
+   - HTML-navigeringar via `NetworkFirst` (så nya versioner hämtas när nät finns, men cache används offline).
+   - Hashade assets via `CacheFirst`.
 
-### 4. Verifiera
+2. **Säker registrering** via en wrapper-modul som *bara* registrerar service worker när:
+   - appen körs i produktion (inte i Lovable-preview, iframe eller dev),
+   - URL:en inte innehåller `?sw=off` (kill-switch).
+   
+   I preview/dev avregistreras eventuell gammal SW automatiskt.
 
-- Visuell kontroll i preview att logotypen renderas snyggt i headern på både desktop och mobil.
+3. **Uppdateringsbeteende**: `autoUpdate` — nästa gång du öppnar appen med internet hämtas ny version i bakgrunden och aktiveras vid omladdning. Ingen popup eller knapp behövs.
 
-### Frågor
+4. **Manifest**: behåll nuvarande `manifest.webmanifest` och ikoner som de är.
 
-- IntygView-rubriken ("OVK – Obligatorisk ventilationskontroll") är en officiell term — ska den vara kvar eller också bytas? Svar: den ska vara kvar.
+5. **Verifiera**: bygg appen och bekräfta att `sw.js` genereras och att `manifest`/ikoner fortfarande pekar rätt.
+
+## Vad som *inte* ändras
+
+- Ingen ändring av IndexedDB/Dexie-schemat — data är redan offline.
+- Inga ändringar i UI, sidor eller besiktningsflödet.
+- Inga ändringar av `start_url`/`scope` i manifestet (de cachas av iOS/Android vid installation).
+
+## Efter implementation
+
+- Använd appen med internet en gång efter publicering så att service workern installeras.
+- Därefter går den att öppna utan nät — både i webbläsaren och från hemskärmsikonen.
+- Offline-läge fungerar bara i publicerad version, inte i Lovable-editorns preview.
