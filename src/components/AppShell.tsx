@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Settings, Home as HomeIcon, Download } from "lucide-react";
+import { Settings, Home as HomeIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import flovvkLogo from "@/assets/flovvk-logo.png";
 
@@ -36,16 +36,6 @@ export function AppShell({ children, title, right }: AppShellProps) {
               aria-label="Hem"
             >
               <HomeIcon className="h-5 w-5" />
-            </Link>
-            <Link
-              to="/install"
-              className={cn(
-                "inline-flex items-center justify-center h-11 w-11 rounded-md hover:bg-accent",
-                loc.pathname === "/install" && "text-primary",
-              )}
-              aria-label="Installera app"
-            >
-              <Download className="h-5 w-5" />
             </Link>
             <Link
               to="/settings"
