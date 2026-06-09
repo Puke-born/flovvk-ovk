@@ -1,7 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
 import { Settings, Home as HomeIcon, Download } from "lucide-react";
 import { cn } from "@/lib/utils";
-import flovvkLogo from "@/assets/flovvk-logo.png.asset.json";
+import flovvkLogo from "@/assets/flovvk-logo.png";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -17,7 +17,7 @@ export function AppShell({ children, title, right }: AppShellProps) {
         <div className="flex items-center gap-3 px-4 h-14 sm:h-16">
           <Link to="/" className="flex items-center gap-2 shrink-0" aria-label="FLOVVK">
             <img
-              src={flovvkLogo.url}
+              src={flovvkLogo}
               alt="FLOVVK – Protokoll & ventilationskontroll"
               className="h-9 sm:h-10 w-auto"
             />
