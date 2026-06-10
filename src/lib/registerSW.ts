@@ -1,8 +1,18 @@
 // Guarded service worker registration. Only registers in published production
 // builds. In dev, Lovable preview, iframes, or with ?sw=off, any existing
 // matching registration is removed instead.
+//
+// When a new version of the app is available, the registered updater is
+// stashed on `window.__updateSW` and a `pwa:need-refresh` CustomEvent is
+// dispatched so UI code can prompt the user to reload.
 
 const SW_URL = "/sw.js";
+
+declare global {
+  interface Window {
+    __updateSW?: (reloadPage?: boolean) => Promise<void>;
+  }
+}
 
 function isBlockedHost(hostname: string): boolean {
   if (hostname.startsWith("id-preview--") || hostname.startsWith("preview--")) return true;
@@ -43,9 +53,28 @@ export function registerServiceWorker() {
     return;
   }
 
-  window.addEventListener("load", () => {
-    navigator.serviceWorker.register(SW_URL, { scope: "/" }).catch(() => {
+  // Dynamically import the virtual module so dev builds don't choke on it.
+  void import("virtual:pwa-register")
+    .then(({ registerSW }) => {
+      const updateSW = registerSW({
+        onNeedRefresh() {
+          window.__updateSW = updateSW;
+          window.dispatchEvent(new CustomEvent("pwa:need-refresh"));
+        },
+        onRegisteredSW(_swUrl, registration) {
+          // Check for updates every 60 minutes while the app stays open.
+          if (registration) {
+            setInterval(
+              () => {
+                registration.update().catch(() => {});
+              },
+              60 * 60 * 1000,
+            );
+          }
+        },
+      });
+    })
+    .catch(() => {
       /* ignore */
     });
-  });
 }
