@@ -14,16 +14,110 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      companies: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      company_members: {
+        Row: {
+          company_id: string
+          created_at: string
+          role: Database["public"]["Enums"]["company_role"]
+          user_id: string
+        }
+        Insert: {
+          company_id: string
+          created_at?: string
+          role?: Database["public"]["Enums"]["company_role"]
+          user_id: string
+        }
+        Update: {
+          company_id?: string
+          created_at?: string
+          role?: Database["public"]["Enums"]["company_role"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "company_members_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      sync_rows: {
+        Row: {
+          company_id: string
+          data: Json
+          deleted_at: number | null
+          entity: string
+          id: string
+          server_updated_at: string
+          updated_at: number
+          updated_by: string | null
+        }
+        Insert: {
+          company_id: string
+          data?: Json
+          deleted_at?: number | null
+          entity: string
+          id: string
+          server_updated_at?: string
+          updated_at: number
+          updated_by?: string | null
+        }
+        Update: {
+          company_id?: string
+          data?: Json
+          deleted_at?: number | null
+          entity?: string
+          id?: string
+          server_updated_at?: string
+          updated_at?: number
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sync_rows_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      current_company_id: { Args: never; Returns: string }
+      is_company_member: {
+        Args: { _company_id: string; _user_id: string }
+        Returns: boolean
+      }
     }
     Enums: {
-      [_ in never]: never
+      company_role: "owner" | "member"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -150,6 +244,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      company_role: ["owner", "member"],
+    },
   },
 } as const
