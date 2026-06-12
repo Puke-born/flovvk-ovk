@@ -1,40 +1,82 @@
-## Bakgrund
-
-All data sparas redan lokalt i IndexedDB (via Dexie, databasen `ovk-app`). Stänger du webbläsaren ligger besiktningar, enheter, kontakter, besiktningsmän, byggnadsnormer och Excel-mallen kvar.
-
-Det som *inte* fungerar idag är att starta appen utan internet — själva app-filerna (HTML/JS/CSS) hämtas från servern varje gång. Det är därför du upplever att offline-stödet inte är klart.
-
 ## Mål
 
-Appen ska kunna öppnas och användas utan internetuppkoppling, både i webbläsaren och som installerad app på surfplattan. Befintlig data i IndexedDB ändras inte.
+1. Smidig första-gångs-upplevelse för nya användare.
+2. E-post/lösenord-inloggning via Lovable Cloud.
+3. Allt (besiktningar, enheter, besiktningsmän, byggnormer, fastighetsägare, driftansvariga, excel-mall) delas inom samma företag.
+4. Offline-läge fortsätter fungera; ändringar synkas när enheten är online; vid konflikt varnas användaren innan serverversionen skriver över lokala ändringar.
 
-## Plan
+## Steg
 
-1. **Lägg till `vite-plugin-pwa`** med `generateSW` och `registerType: "autoUpdate"`.
-   - Pre-cacha hela app-skalet (HTML, JS, CSS, ikoner, fonter).
-   - HTML-navigeringar via `NetworkFirst` (så nya versioner hämtas när nät finns, men cache används offline).
-   - Hashade assets via `CacheFirst`.
+### 1. Aktivera Lovable Cloud
+Slå på Cloud för att få databas, autentisering och edge functions.
 
-2. **Säker registrering** via en wrapper-modul som *bara* registrerar service worker när:
-   - appen körs i produktion (inte i Lovable-preview, iframe eller dev),
-   - URL:en inte innehåller `?sw=off` (kill-switch).
-   
-   I preview/dev avregistreras eventuell gammal SW automatiskt.
+### 2. Datamodell (Postgres + RLS)
 
-3. **Uppdateringsbeteende**: `autoUpdate` — nästa gång du öppnar appen med internet hämtas ny version i bakgrunden och aktiveras vid omladdning. Ingen popup eller knapp behövs.
+```text
+companies        id, name, created_at, created_by
+company_members  id, company_id, user_id, role (owner|member), created_at
+                 (en användare = ett företag i denna version)
 
-4. **Manifest**: behåll nuvarande `manifest.webmanifest` och ikoner som de är.
+inspections      ... + company_id, updated_at, updated_by, deleted_at
+units            ... + company_id, updated_at, updated_by, deleted_at
+property_owners  ... + company_id, updated_at, updated_by, deleted_at
+operations_mgrs  ... + company_id, updated_at, updated_by, deleted_at
+inspectors       ... + company_id, updated_at, updated_by, deleted_at
+building_norms   ... + company_id, updated_at, updated_by, deleted_at
+excel_template   company_id (PK), file_name, data (storage path), updated_at, updated_by
+```
 
-5. **Verifiera**: bygg appen och bekräfta att `sw.js` genereras och att `manifest`/ikoner fortfarande pekar rätt.
+- RLS: medlemmar i `company_id` får full CRUD; andra noll åtkomst.
+- Excel-mall lagras i privat Storage-bucket `excel-templates/<company_id>/template.xlsx`.
+- Signaturer (bilder) stannar inbäddade i `inspectors.signature` (base64) som idag.
 
-## Vad som *inte* ändras
+### 3. Autentisering
 
-- Ingen ändring av IndexedDB/Dexie-schemat — data är redan offline.
-- Inga ändringar i UI, sidor eller besiktningsflödet.
-- Inga ändringar av `start_url`/`scope` i manifestet (de cachas av iOS/Android vid installation).
+- Sida `/auth`: e-post + lösenord, växla mellan logga in / skapa konto.
+- Skapa konto → edge function (eller DB-trigger) skapar `companies`-rad + `company_members` med rollen `owner`. Företagsnamn frågas i ett enkelt fält vid första inloggning om det saknas.
+- Skyddade routes: alla nuvarande sidor kräver session. Oinloggade skickas till `/auth`.
+- Sessionen cachas i IndexedDB via Supabase-klienten så att inloggade användare kan öppna appen offline.
 
-## Efter implementation
+### 4. Offline + synk
 
-- Använd appen med internet en gång efter publicering så att service workern installeras.
-- Därefter går den att öppna utan nät — både i webbläsaren och från hemskärmsikonen.
-- Offline-läge fungerar bara i publicerad version, inte i Lovable-editorns preview.
+Behåll Dexie som primär lagring (appen är offline-first). Lägg till ett synk-lager:
+
+- Varje tabell får `updated_at` (ms), `updated_by` (user_id), `deleted_at` (soft delete) lokalt och på servern.
+- Outbox-kö i Dexie: alla skrivningar köas som mutationer (`upsert` / `delete` per rad).
+- När online: skicka outbox i ordning. Servern accepterar `upsert` om `incoming.updated_at >= server.updated_at` (last-write-wins).
+- Pull: efter push, hämta rader där `server.updated_at > local.lastPulledAt` för användarens `company_id`.
+- Konfliktvarning: innan en inkommande server-rad skriver över en lokal rad som har osynkade ändringar i outboxen, visa en dialog ("En kollega har ändrat denna besiktning – behåll mina ändringar eller använd serverns version?"). Val sparas och tillämpas.
+- Statusindikator i header: "Online / Synkar / Offline / X ändringar väntar".
+
+### 5. Onboarding (informationsruta)
+
+- Första gången en inloggad användare öppnar Hem och inga inspektioner/besiktningsmän/mall finns: visa en `Card` med kort text och länkar till Inställningar (Besiktningsmän, Excel-mall, Byggnormer, Fastighetsägare). Kan stängas och kommer inte tillbaka (flagga i localStorage per användare).
+
+### 6. Migrering av befintlig lokal data
+
+- Vid första inloggning: om Dexie har data utan `company_id`, märk allt med användarens nya `company_id` och lägg in i outbox för uppladdning. Visa toast: "Din lokala data flyttas till ditt företag."
+
+### 7. Säkerhet
+
+- RLS-policys via `has_company_role`-funktion (security definer) för att undvika rekursion.
+- Lösenord-HIBP aktiveras.
+- Bekräftelsemail av kontot avstängt (snabb onboarding); kan slås på senare.
+
+## Teknisk översikt (för utvecklare)
+
+- Nya filer: `src/pages/AuthPage.tsx`, `src/lib/auth.ts`, `src/lib/sync/` (outbox, puller, conflictResolver), `src/components/SyncStatus.tsx`, `src/components/ConflictDialog.tsx`, `src/components/OnboardingCard.tsx`.
+- Dexie schema bump: lägg till `updated_at`, `updated_by`, `deleted_at`, `companyId`, ny tabell `outbox`, ny tabell `syncMeta`.
+- Edge function `bootstrap-company` körs efter signup för att skapa företag + medlemskap atomärt.
+- `App.tsx`: `AuthProvider` runt routes; `ProtectedRoute`-wrapper.
+
+## Vad som INTE ändras
+
+- UI/layout i besiktningssidor, excel-export, befintliga formulärfält.
+- Service worker / PWA-uppdateringsnotis.
+- Logik för G/EG, statusar, grid-celler.
+
+## Begränsningar att nämna för dig
+
+- En användare tillhör ett företag. Vill ni senare ha flera företag per användare eller inbjudningar via e-post bygger vi det som steg 2.
+- Offline-synk fungerar bara på publicerad version (samma som service workern). I editor-preview körs allt lokalt utan synk.
+- Första inloggningen kräver internet.
