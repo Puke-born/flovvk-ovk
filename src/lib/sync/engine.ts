@@ -28,7 +28,9 @@ export function getSyncState() {
 export function subscribeSync(l: Listener) {
   listeners.add(l);
   l(_state);
-  return () => listeners.delete(l);
+  return () => {
+    listeners.delete(l);
+  };
 }
 function setState(p: Partial<SyncState>) {
   _state = { ..._state, ...p };
