@@ -208,7 +208,9 @@ const conflictListeners = new Set<(list: ConflictItem[]) => void>();
 export function subscribeConflicts(l: (list: ConflictItem[]) => void) {
   conflictListeners.add(l);
   l(conflicts);
-  return () => conflictListeners.delete(l);
+  return () => {
+    conflictListeners.delete(l);
+  };
 }
 function notifyConflicts() {
   conflictListeners.forEach((l) => l(conflicts.slice()));
