@@ -27,14 +27,22 @@ export const VENT_TYPES = ["F", "FT", "FTX", "S", "FX"] as const;
 export const INSPECTION_TYPES = ["FB", "ÅB", "OB"] as const;
 export const INSPECTION_INTERVALS = ["3 år", "6 år"] as const;
 
-export interface BuildingNorm {
+// Sync metadata mixed into every row.
+export interface SyncFields {
+  companyId?: string;
+  updatedBy?: string;
+  deletedAt?: number;
+}
+
+export interface BuildingNorm extends SyncFields {
   id: string;
   year: string;
   norm: string;
   note?: string;
+  updatedAt?: number;
 }
 
-export interface Contact {
+export interface Contact extends SyncFields {
   id: string;
   name: string;
   contactPerson?: string;
@@ -43,14 +51,15 @@ export interface Contact {
   city?: string;
   phone?: string;
   email?: string;
+  updatedAt?: number;
 }
 
-export interface Inspector {
+export interface Inspector extends SyncFields {
   id: string;
   name: string;
   authorization?: string;
   certificationNumber?: string;
-  signature?: string; // base64 PNG data URL
+  signature?: string;
   phone?: string;
   email?: string;
   company?: string;
@@ -58,14 +67,14 @@ export interface Inspector {
   address?: string;
   postalCode?: string;
   city?: string;
+  updatedAt?: number;
 }
 
-export interface Inspection {
+export interface Inspection extends SyncFields {
   id: string;
   createdAt: number;
   updatedAt: number;
-  // Property data
-  propertyDesignation: string; // Fastighetsbeteckning J7
+  propertyDesignation: string;
   buildingYear?: string;
   renovationYear?: string;
   address?: string;
@@ -74,11 +83,9 @@ export interface Inspection {
   buildingId?: string;
   buildingNorm?: string;
   workOrderNumber?: string;
-  // Linked
   propertyOwnerId?: string;
   operationsManagerId?: string;
   inspectorId?: string;
-  // Inspector snapshot
   inspectorName?: string;
   inspectorAuthorization?: string;
   inspectorCertificationNumber?: string;
@@ -93,59 +100,96 @@ export interface Inspection {
   archived?: boolean;
 }
 
-export interface Unit {
+export interface Unit extends SyncFields {
   id: string;
   inspectionId: string;
   order: number;
   createdAt: number;
   updatedAt: number;
-  // Header
-  systemDesignation: string; // A14
+  systemDesignation: string;
   operatingHours?: string;
-  inspectionInterval?: string; // 3/6
+  inspectionInterval?: string;
   aggregate?: string;
-  placement?: string; // F16
+  placement?: string;
   apartmentCount?: string;
-  // Building/property (mostly inherited from inspection but editable per unit)
   ventilationType?: string;
   servedArea?: string;
   business?: string;
-  // Inspection details
   inspectionType?: string;
   inspectionDate?: string;
   reInspectionDate?: string;
   nextOrdinaryDate?: string;
   previousInspectionDate?: string;
-  // Tech
   ratedPower?: string;
   airflow?: string;
   qNozzle?: string;
   customTechFields?: { id: string; label: string; value: string }[];
-  // Status
   status?: AggregateStatus;
   replacementInterval?: ReplacementInterval;
-  verdict?: Verdict; // G / EG
+  verdict?: Verdict;
   notes?: string;
-  // Free-form grid for remarks: 30 rows × 13 cols, sparse. Exports to H21:T50.
   gridCells?: string[][];
 }
 
-export interface ExcelTemplate {
-  id: string; // always "template"
+export interface ExcelTemplate extends SyncFields {
+  id: string;
   fileName: string;
   uploadedAt: number;
   data: ArrayBuffer;
+  updatedAt?: number;
 }
+
+// Outbox of pending sync mutations.
+export interface OutboxEntry {
+  id: string; // uuid
+  entity: SyncEntity;
+  rowId: string;
+  op: "upsert" | "delete";
+  enqueuedAt: number;
+  attempts: number;
+  lastError?: string;
+}
+
+// Per-(entity, kind) cursor.
+export interface SyncMeta {
+  key: string; // e.g. "pull:lastServerUpdatedAt"
+  value: string;
+}
+
+export type SyncEntity =
+  | "inspection"
+  | "unit"
+  | "propertyOwner"
+  | "operationsManager"
+  | "inspector"
+  | "buildingNorm"
+  | "excelTemplate";
+
+export const TABLE_FOR_ENTITY: Record<SyncEntity, string> = {
+  inspection: "inspections",
+  unit: "units",
+  propertyOwner: "propertyOwners",
+  operationsManager: "operationsManagers",
+  inspector: "inspectors",
+  buildingNorm: "buildingNorms",
+  excelTemplate: "excelTemplate",
+};
+
+export const ENTITY_FOR_TABLE: Record<string, SyncEntity> = Object.fromEntries(
+  Object.entries(TABLE_FOR_ENTITY).map(([e, t]) => [t, e as SyncEntity]),
+) as Record<string, SyncEntity>;
 
 class OvkDB extends Dexie {
   inspections!: Table<Inspection, string>;
   units!: Table<Unit, string>;
   propertyOwners!: Table<Contact, string>;
   operationsManagers!: Table<Contact, string>;
-  inspector!: Table<Inspector, string>; // legacy single-record (kept for migration)
+  inspector!: Table<Inspector, string>;
   inspectors!: Table<Inspector, string>;
   buildingNorms!: Table<BuildingNorm, string>;
   excelTemplate!: Table<ExcelTemplate, string>;
+  outbox!: Table<OutboxEntry, string>;
+  syncMeta!: Table<SyncMeta, string>;
 
   constructor() {
     super("ovk-app");
@@ -190,7 +234,113 @@ class OvkDB extends Dexie {
       buildingNorms: "id, year",
       excelTemplate: "id",
     });
+    this.version(5).stores({
+      inspections: "id, createdAt, updatedAt, propertyDesignation, archived, companyId",
+      units: "id, inspectionId, order, updatedAt, companyId",
+      propertyOwners: "id, name, companyId",
+      operationsManagers: "id, name, companyId",
+      inspector: "id",
+      inspectors: "id, name, companyId",
+      buildingNorms: "id, year, companyId",
+      excelTemplate: "id, companyId",
+      outbox: "id, entity, rowId, enqueuedAt",
+      syncMeta: "key",
+    });
+
+    this.attachSyncHooks();
   }
+
+  private attachSyncHooks() {
+    const syncedTables: (keyof OvkDB)[] = [
+      "inspections",
+      "units",
+      "propertyOwners",
+      "operationsManagers",
+      "inspectors",
+      "buildingNorms",
+      "excelTemplate",
+    ];
+    for (const tableName of syncedTables) {
+      const tbl = (this as any)[tableName] as Table<any, any>;
+      const entity = ENTITY_FOR_TABLE[tableName as string];
+      if (!entity) continue;
+
+      tbl.hook("creating", (_pk, obj) => {
+        const ctx = getSyncContext();
+        if (ctx.companyId && !obj.companyId) obj.companyId = ctx.companyId;
+        if (ctx.userId && !obj.updatedBy) obj.updatedBy = ctx.userId;
+        if (obj.updatedAt == null) obj.updatedAt = Date.now();
+        if (!ctx.suppressOutbox) enqueueLater(entity, primaryKey(obj), "upsert");
+      });
+
+      tbl.hook("updating", (mods: any, _pk, obj) => {
+        const ctx = getSyncContext();
+        const next: any = { ...mods };
+        if (ctx.companyId && !obj.companyId && next.companyId == null) {
+          next.companyId = ctx.companyId;
+        }
+        if (ctx.userId && next.updatedBy == null) next.updatedBy = ctx.userId;
+        if (next.updatedAt == null) next.updatedAt = Date.now();
+        if (!ctx.suppressOutbox) enqueueLater(entity, primaryKey(obj), "upsert");
+        return next;
+      });
+
+      tbl.hook("deleting", (_pk, obj) => {
+        const ctx = getSyncContext();
+        if (!ctx.suppressOutbox) enqueueLater(entity, primaryKey(obj), "delete");
+      });
+    }
+  }
+}
+
+function primaryKey(obj: any): string {
+  return String(obj?.id);
+}
+
+// Sync context maintained by AuthProvider / sync engine.
+interface SyncContext {
+  companyId?: string;
+  userId?: string;
+  suppressOutbox?: boolean;
+}
+let _syncContext: SyncContext = {};
+export function setSyncContext(ctx: Partial<SyncContext>) {
+  _syncContext = { ..._syncContext, ...ctx };
+}
+export function getSyncContext(): SyncContext {
+  return _syncContext;
+}
+export async function withoutOutbox<T>(fn: () => Promise<T>): Promise<T> {
+  const prev = _syncContext.suppressOutbox;
+  _syncContext = { ..._syncContext, suppressOutbox: true };
+  try {
+    return await fn();
+  } finally {
+    _syncContext = { ..._syncContext, suppressOutbox: prev };
+  }
+}
+
+// Outbox enqueue (deferred so we don't conflict with the running transaction).
+function enqueueLater(entity: SyncEntity, rowId: string, op: "upsert" | "delete") {
+  queueMicrotask(() => {
+    db.outbox
+      .add({
+        id: uid(),
+        entity,
+        rowId,
+        op,
+        enqueuedAt: Date.now(),
+        attempts: 0,
+      })
+      .catch(() => {});
+    // Trigger sync nudge if listener registered.
+    syncNudge?.();
+  });
+}
+
+let syncNudge: (() => void) | null = null;
+export function setSyncNudge(fn: (() => void) | null) {
+  syncNudge = fn;
 }
 
 export const db = new OvkDB();
