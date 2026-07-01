@@ -1,9 +1,7 @@
 import { Link, useLocation } from "react-router-dom";
-import { Settings, Home as HomeIcon, LogOut } from "lucide-react";
+import { Settings, Home as HomeIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 import flovvkLogo from "@/assets/flovvk-logo.png";
-import { SyncStatus } from "@/components/SyncStatus";
-import { useAuth } from "@/lib/auth";
 
 interface AppShellProps {
   children: React.ReactNode;
@@ -13,7 +11,6 @@ interface AppShellProps {
 
 export function AppShell({ children, title, right }: AppShellProps) {
   const loc = useLocation();
-  const { signOut, session } = useAuth();
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <header className="sticky top-0 z-30 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/80 no-print">
@@ -30,7 +27,6 @@ export function AppShell({ children, title, right }: AppShellProps) {
           </div>
           <div className="flex items-center gap-1">
             {right}
-            <SyncStatus />
             <Link
               to="/"
               className={cn(
@@ -51,17 +47,6 @@ export function AppShell({ children, title, right }: AppShellProps) {
             >
               <Settings className="h-5 w-5" />
             </Link>
-            {session && (
-              <button
-                onClick={() => signOut()}
-                className="inline-flex items-center justify-center h-11 w-11 rounded-md hover:bg-accent text-muted-foreground"
-                aria-label="Logga ut"
-                title="Logga ut"
-                type="button"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
-            )}
           </div>
         </div>
       </header>

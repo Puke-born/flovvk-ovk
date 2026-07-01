@@ -5,7 +5,6 @@ import { db, createInspection, deleteInspection } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { AppShell } from "@/components/AppShell";
-import { OnboardingCard } from "@/components/OnboardingCard";
 import { formatDateSE } from "@/lib/utils";
 import {
   AlertDialog,
@@ -51,8 +50,6 @@ export default function Home() {
             <Plus className="mr-2 h-5 w-5" /> Ny besiktning
           </Button>
         </div>
-        <OnboardingCard />
-
 
         {inspections && inspections.length === 0 && (
           <Card className="p-8 text-center border-dashed">
