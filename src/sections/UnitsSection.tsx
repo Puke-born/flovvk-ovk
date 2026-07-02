@@ -353,6 +353,7 @@ const UnitEditor = memo(function UnitEditor({
           options={ventOptions}
         />
         <BufferedField label="Antal lägenheter" value={form.apartmentCount ?? ""} onValueChange={(v) => set("apartmentCount", v)} />
+        <BufferedField label="Ombyggnadsår" value={form.renovationYear ?? ""} onValueChange={(v) => set("renovationYear", v)} />
         <BufferedField label="Drifttider" value={form.operatingHours ?? ""} onValueChange={(v) => set("operatingHours", v)} />
         <BufferedField label="Betjänad yta" value={form.servedArea ?? ""} onValueChange={(v) => set("servedArea", v)} />
         <BufferedField

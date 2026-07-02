@@ -172,6 +172,7 @@ function processSheetWithUnitRows(
   worksheet: ExcelJS.Worksheet,
   data: ExportData,
   workbook: ExcelJS.Workbook,
+  units: (UnitData | undefined)[],
 ): void {
   // Collect unit-template rows in order
   const unitRows: ExcelJS.Row[] = [];
@@ -191,13 +192,28 @@ function processSheetWithUnitRows(
     });
   });
 
-  // Now fill unit rows
+  // Now fill unit rows with the provided chunk
   unitRows.forEach((row, i) => {
-    const unit = data.units[i];
+    const unit = units[i];
     row.eachCell({ includeEmpty: false }, (cell) => {
       replaceInCell(cell, data, unit, workbook, worksheet);
     });
   });
+}
+
+/**
+ * Count how many rows in a sheet contain unit.* placeholders (without mutating).
+ */
+function countUnitRows(worksheet: ExcelJS.Worksheet): number {
+  let n = 0;
+  worksheet.eachRow({ includeEmpty: false }, (row) => {
+    let hasUnit = false;
+    row.eachCell({ includeEmpty: false }, (cell) => {
+      if (cellHasUnitPlaceholder(cell)) hasUnit = true;
+    });
+    if (hasUnit) n++;
+  });
+  return n;
 }
 
 /**
@@ -274,10 +290,35 @@ export async function exportInspectionToExcel(inspectionId: string): Promise<voi
   // Find aggregate template sheet by exact name
   const tplSheet = wb.getWorksheet(TEMPLATE_SHEET_NAME);
 
-  // Process non-aggregate sheets first (replace inspection-level placeholders)
-  wb.worksheets
-    .filter((ws) => ws.name !== TEMPLATE_SHEET_NAME)
-    .forEach((ws) => processSheetWithUnitRows(ws, data, wb));
+  // Process non-aggregate sheets. If a sheet has unit.* rows and more units
+  // exist than slots, duplicate the sheet so all units are represented.
+  const nonAggSheets = wb.worksheets.filter((ws) => ws.name !== TEMPLATE_SHEET_NAME);
+  nonAggSheets.forEach((ws) => {
+    const slotCount = countUnitRows(ws);
+    if (slotCount === 0 || data.units.length <= Math.max(slotCount, 1)) {
+      processSheetWithUnitRows(ws, data, wb, data.units);
+      return;
+    }
+    // Chunk units into groups of `slotCount`
+    const chunks: UnitData[][] = [];
+    for (let i = 0; i < data.units.length; i += slotCount) {
+      chunks.push(data.units.slice(i, i + slotCount));
+    }
+    // Snapshot the sheet's model BEFORE processing so we can duplicate it
+    const model = JSON.parse(JSON.stringify(ws.model));
+    const baseName = ws.name;
+    // First chunk fills the original sheet
+    processSheetWithUnitRows(ws, data, wb, chunks[0]);
+    // Remaining chunks -> new duplicated sheets
+    for (let i = 1; i < chunks.length; i++) {
+      const name = uniqueSheetName(wb, baseName);
+      const newSheet = wb.addWorksheet(name);
+      const m = JSON.parse(JSON.stringify(model));
+      const newId = (newSheet as any).id;
+      newSheet.model = { ...m, id: newId, name };
+      processSheetWithUnitRows(newSheet, data, wb, chunks[i]);
+    }
+  });
 
   if (tplSheet && data.units.length > 0) {
     // Position to insert duplicated sheets — keep them where the template was
