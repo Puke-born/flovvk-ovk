@@ -1,40 +1,31 @@
-## Bakgrund
+## 1. Ombyggnadsår per aggregat
 
-All data sparas redan lokalt i IndexedDB (via Dexie, databasen `ovk-app`). Stänger du webbläsaren ligger besiktningar, enheter, kontakter, besiktningsmän, byggnadsnormer och Excel-mallen kvar.
+Idag finns `renovationYear` bara på besiktningen (fastighetsnivå). Vi lägger till samma fält per aggregat så det kan skilja sig mellan olika aggregat i samma besiktning.
 
-Det som *inte* fungerar idag är att starta appen utan internet — själva app-filerna (HTML/JS/CSS) hämtas från servern varje gång. Det är därför du upplever att offline-stödet inte är klart.
+- Lägg till `renovationYear?: string` på `Unit` i `src/lib/db.ts`.
+- Lägg till ett inmatningsfält "Ombyggnadsår" i aggregat-editorn i `src/sections/UnitsSection.tsx`, placerat nära befintliga byggnads-/verksamhetsfält.
+- Exponera `unit.renovationYear` i `src/lib/excelPlaceholders.ts` (både i `unitFields`-outputen och i listan `AVAILABLE_PLACEHOLDERS` så det syns i mallguiden).
+- Fastighetsnivåns `{{renovationYear}}` behålls oförändrad.
 
-## Mål
+## 2. Intygsbladet kopieras vid fler än 13 aggregat
 
-Appen ska kunna öppnas och användas utan internetuppkoppling, både i webbläsaren och som installerad app på surfplattan. Befintlig data i IndexedDB ändras inte.
+Intygsbladet har idag plats för 13 rader med `{{unit.*}}`-platshållare (rad 9–21). När det är fler aggregat än så tappas resten bort i exporten.
 
-## Plan
+- I `src/lib/excelExport.ts`, bygg om `processSheetWithUnitRows` så att den:
+  1. Identifierar mall-raderna med `unit.*`-platshållare **innan** något ersätts.
+  2. Sparar en oförändrad kopia av bladets `model` (via `JSON.parse(JSON.stringify(...))`) och rad-mall.
+  3. Fyller första bladet med aggregat 1–N (där N = antal unit-rader i mallen, t.ex. 13).
+  4. Om det finns fler aggregat: skapa nya blad genom att duplicera modellen — namngivna `<originalnamn> (2)`, `(3)` osv. via befintlig `uniqueSheetName` — och fyll dem med nästa chunk aggregat.
+  5. Överblivna unit-rader på sista bladet blankas (som idag).
+- Icke-unit-celler (rubriker, sidfot, signaturplatshållare m.m.) fylls på varje kopia med samma besiktningsdata så bladet är komplett i sig.
+- Aggregat-bladen (`TEMPLATE_SHEET_NAME = "Aggregat"`) påverkas inte — de dupliceras redan per aggregat.
 
-1. **Lägg till `vite-plugin-pwa`** med `generateSW` och `registerType: "autoUpdate"`.
-   - Pre-cacha hela app-skalet (HTML, JS, CSS, ikoner, fonter).
-   - HTML-navigeringar via `NetworkFirst` (så nya versioner hämtas när nät finns, men cache används offline).
-   - Hashade assets via `CacheFirst`.
+## Teknisk sammanfattning
 
-2. **Säker registrering** via en wrapper-modul som *bara* registrerar service worker när:
-   - appen körs i produktion (inte i Lovable-preview, iframe eller dev),
-   - URL:en inte innehåller `?sw=off` (kill-switch).
-   
-   I preview/dev avregistreras eventuell gammal SW automatiskt.
+Filer som ändras:
+- `src/lib/db.ts` — nytt fält på `Unit`.
+- `src/sections/UnitsSection.tsx` — UI-fält för ombyggnadsår.
+- `src/lib/excelPlaceholders.ts` — mapping + listning av `unit.renovationYear`.
+- `src/lib/excelExport.ts` — chunkning + bladduplicering för intygs-liknande blad.
 
-3. **Uppdateringsbeteende**: `autoUpdate` — nästa gång du öppnar appen med internet hämtas ny version i bakgrunden och aktiveras vid omladdning. Ingen popup eller knapp behövs.
-
-4. **Manifest**: behåll nuvarande `manifest.webmanifest` och ikoner som de är.
-
-5. **Verifiera**: bygg appen och bekräfta att `sw.js` genereras och att `manifest`/ikoner fortfarande pekar rätt.
-
-## Vad som *inte* ändras
-
-- Ingen ändring av IndexedDB/Dexie-schemat — data är redan offline.
-- Inga ändringar i UI, sidor eller besiktningsflödet.
-- Inga ändringar av `start_url`/`scope` i manifestet (de cachas av iOS/Android vid installation).
-
-## Efter implementation
-
-- Använd appen med internet en gång efter publicering så att service workern installeras.
-- Därefter går den att öppna utan nät — både i webbläsaren och från hemskärmsikonen.
-- Offline-läge fungerar bara i publicerad version, inte i Lovable-editorns preview.
+Inga schemaändringar i backend, ingen migration av befintlig data (nya fält är valfria och tomma tills användaren fyller i dem).
