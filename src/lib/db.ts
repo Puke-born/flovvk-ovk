@@ -106,6 +106,7 @@ export interface Unit {
   aggregate?: string;
   placement?: string; // F16
   apartmentCount?: string;
+  renovationYear?: string;
   // Building/property (mostly inherited from inspection but editable per unit)
   ventilationType?: string;
   servedArea?: string;
