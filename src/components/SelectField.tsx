@@ -42,7 +42,7 @@ function renderOptionLabel(label: string) {
   if (!match) return label;
 
   return (
-    <span className="grid min-w-0 grid-cols-[2.75rem_1fr] gap-1 text-left">
+    <span className="grid min-w-0 grid-cols-[2.25rem_1fr] gap-2 text-left">
       <span className="font-medium">{match[1]}</span>
       <span className="min-w-0">- {match[2]}</span>
     </span>
@@ -154,7 +154,7 @@ export const SelectField = React.memo(function SelectField({
         }}
       >
         <SelectTrigger id={id} className="h-11 text-base">
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={placeholder}>{opts.find((o) => o.value === value)?.label}</SelectValue>
         </SelectTrigger>
         <SelectContent className="max-h-none">
           {allowEmpty && (
