@@ -7,7 +7,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -35,6 +34,18 @@ function normalize(o: SelectOption) {
   return typeof o === "string"
     ? { value: o, label: o, disabled: false, disabledReason: undefined as string | undefined }
     : { value: o.value, label: o.label ?? o.value, disabled: !!o.disabled, disabledReason: o.disabledReason };
+}
+
+function renderOptionLabel(label: string) {
+  const match = label.match(/^([A-ZÅÄÖ]{1,4}) - (.+)$/);
+  if (!match) return label;
+
+  return (
+    <span className="grid min-w-0 grid-cols-[2.25rem_1fr] gap-2 text-left">
+      <span className="font-medium">{match[1]}</span>
+      <span className="min-w-0">- {match[2]}</span>
+    </span>
+  );
 }
 
 export const SelectField = React.memo(function SelectField({
@@ -142,7 +153,9 @@ export const SelectField = React.memo(function SelectField({
         }}
       >
         <SelectTrigger id={id} className="h-11 text-base">
-          <SelectValue placeholder={placeholder} />
+          <span className={cn("block min-w-0 flex-1 truncate text-left", !value && "text-muted-foreground")}>
+            {value ? (opts.find((o) => o.value === value)?.label ?? value) : allowEmpty ? "— inget valt —" : placeholder}
+          </span>
         </SelectTrigger>
         <SelectContent className="max-h-none">
           {allowEmpty && (
@@ -154,11 +167,12 @@ export const SelectField = React.memo(function SelectField({
             <SelectItem
               key={o.value}
               value={o.value}
+              textValue={o.label}
               disabled={o.disabled}
               className={cn("text-base py-3", o.disabled && "text-muted-foreground")}
               title={o.disabled ? o.disabledReason : undefined}
             >
-              {o.label}
+              {renderOptionLabel(o.label)}
               {o.disabled && o.disabledReason ? (
                 <span className="block text-[11px] text-muted-foreground/80 mt-0.5">
                   {o.disabledReason}
