@@ -7,7 +7,6 @@ import {
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 
@@ -154,7 +153,9 @@ export const SelectField = React.memo(function SelectField({
         }}
       >
         <SelectTrigger id={id} className="h-11 text-base">
-          <SelectValue placeholder={placeholder}>{opts.find((o) => o.value === value)?.label}</SelectValue>
+          <span className={cn("block min-w-0 flex-1 truncate text-left", !value && "text-muted-foreground")}>
+            {value ? (opts.find((o) => o.value === value)?.label ?? value) : allowEmpty ? "— inget valt —" : placeholder}
+          </span>
         </SelectTrigger>
         <SelectContent className="max-h-none">
           {allowEmpty && (
