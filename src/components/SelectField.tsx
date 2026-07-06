@@ -37,6 +37,18 @@ function normalize(o: SelectOption) {
     : { value: o.value, label: o.label ?? o.value, disabled: !!o.disabled, disabledReason: o.disabledReason };
 }
 
+function renderOptionLabel(label: string) {
+  const match = label.match(/^([A-ZÅÄÖ]{1,4}) - (.+)$/);
+  if (!match) return label;
+
+  return (
+    <span className="grid min-w-0 grid-cols-[2.75rem_1fr] gap-1 text-left">
+      <span className="font-medium">{match[1]}</span>
+      <span className="min-w-0">- {match[2]}</span>
+    </span>
+  );
+}
+
 export const SelectField = React.memo(function SelectField({
   label,
   value,
@@ -154,11 +166,12 @@ export const SelectField = React.memo(function SelectField({
             <SelectItem
               key={o.value}
               value={o.value}
+              textValue={o.label}
               disabled={o.disabled}
               className={cn("text-base py-3", o.disabled && "text-muted-foreground")}
               title={o.disabled ? o.disabledReason : undefined}
             >
-              {o.label}
+              {renderOptionLabel(o.label)}
               {o.disabled && o.disabledReason ? (
                 <span className="block text-[11px] text-muted-foreground/80 mt-0.5">
                   {o.disabledReason}
