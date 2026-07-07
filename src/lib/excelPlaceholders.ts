@@ -60,7 +60,7 @@ export async function buildExportData(inspectionId: string): Promise<ExportData>
     inspection: {
       propertyDesignation: s(inspection.propertyDesignation),
       buildingYear: s(inspection.buildingYear),
-      renovationYear: s(inspection.renovationYear),
+      
       address: s(inspection.address),
       postalCode: s(inspection.postalCode),
       city: s(inspection.city),
