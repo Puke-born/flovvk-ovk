@@ -64,11 +64,12 @@ export function InspectionHeaderForm({ inspection }: Props) {
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Auto-fill Byggnorm based on Byggår / Ombyggnadsår.
-  // Picks the norm with the highest year <= effective year (renovation wins if set).
+  // Auto-fill Byggnorm based on Byggår.
+  // Picks the norm with the highest year <= building year.
   // Only overwrites if current value is empty OR equals the previously auto-filled value.
   const sortedNorms = [...(norms ?? [])].sort((a, b) => Number(a.year || 0) - Number(b.year || 0));
-  const effectiveYearStr = form.renovationYear?.trim() || form.buildingYear?.trim() || "";
+  const effectiveYearStr = form.buildingYear?.trim() || "";
+
   const effectiveYear = Number(effectiveYearStr);
   const matchedNorm =
     effectiveYearStr && !Number.isNaN(effectiveYear)
