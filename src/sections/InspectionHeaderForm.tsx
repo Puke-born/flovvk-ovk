@@ -30,7 +30,6 @@ export function InspectionHeaderForm({ inspection }: Props) {
   const [form, setForm] = useState({
     propertyDesignation: inspection.propertyDesignation ?? "",
     buildingYear: inspection.buildingYear ?? "",
-    renovationYear: inspection.renovationYear ?? "",
     address: inspection.address ?? "",
     postalCode: inspection.postalCode ?? "",
     city: inspection.city ?? "",
