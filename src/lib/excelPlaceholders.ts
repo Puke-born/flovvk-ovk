@@ -141,7 +141,7 @@ export const AVAILABLE_PLACEHOLDERS = {
   Besiktning: [
     "propertyDesignation",
     "buildingYear",
-    "renovationYear",
+    
     "address",
     "postalCode",
     "city",
