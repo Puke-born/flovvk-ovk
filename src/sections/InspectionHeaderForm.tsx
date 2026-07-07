@@ -134,14 +134,9 @@ export function InspectionHeaderForm({ inspection }: Props) {
           label="Byggår"
           value={form.buildingYear}
           onChange={(e) => set("buildingYear", e.target.value)}
-          containerClassName="col-span-1 sm:col-span-1"
+          containerClassName="col-span-2 sm:col-span-2"
         />
-        <Field
-          label="Ombyggnadsår"
-          value={form.renovationYear}
-          onChange={(e) => set("renovationYear", e.target.value)}
-          containerClassName="col-span-1 sm:col-span-1"
-        />
+
         <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-4">
           <div className="flex items-center justify-between">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
