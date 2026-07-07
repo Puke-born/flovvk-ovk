@@ -333,36 +333,68 @@ const UnitEditor = memo(function UnitEditor({
         </div>
       </div>
 
-      <Section title="System">
-        <BufferedField
-          label="Systembeteckning *"
-          value={form.systemDesignation}
-          onValueChange={(v) => set("systemDesignation", v)}
-          containerClassName="sm:col-span-2"
-        />
-        <BufferedField label="Aggregat" value={form.aggregate ?? ""} onValueChange={(v) => set("aggregate", v)} />
-        <BufferedField
-          label="Aggregatplacering *"
-          value={form.placement ?? ""}
-          onValueChange={(v) => set("placement", v)}
-        />
-        <SelectField
-          label="Typ av ventilation"
-          value={form.ventilationType ?? ""}
-          onValueChange={(v) => set("ventilationType", v)}
-          options={ventOptions}
-        />
-        <BufferedField label="Antal lägenheter" value={form.apartmentCount ?? ""} onValueChange={(v) => set("apartmentCount", v)} />
-        <BufferedField label="Ombyggnadsår" value={form.renovationYear ?? ""} onValueChange={(v) => set("renovationYear", v)} />
-        <BufferedField label="Drifttider" value={form.operatingHours ?? ""} onValueChange={(v) => set("operatingHours", v)} />
-        <BufferedField label="Betjänad yta" value={form.servedArea ?? ""} onValueChange={(v) => set("servedArea", v)} />
-        <BufferedField
-          label="Verksamhet"
-          value={form.business ?? ""}
-          onValueChange={(v) => set("business", v)}
-          containerClassName="sm:col-span-2"
-        />
-      </Section>
+      <div>
+        <h4 className="text-sm font-bold uppercase tracking-wide text-primary mb-3 pb-1 border-b border-primary/20">
+          System
+        </h4>
+        <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+          <BufferedField
+            label="Systembeteckning *"
+            value={form.systemDesignation}
+            onValueChange={(v) => set("systemDesignation", v)}
+            containerClassName="col-span-2 sm:col-span-2"
+          />
+          <BufferedField
+            label="Aggregat"
+            value={form.aggregate ?? ""}
+            onValueChange={(v) => set("aggregate", v)}
+            containerClassName="col-span-1 sm:col-span-2"
+          />
+          <BufferedField
+            label="Aggregatplacering *"
+            value={form.placement ?? ""}
+            onValueChange={(v) => set("placement", v)}
+            containerClassName="col-span-1 sm:col-span-2"
+          />
+          <SelectField
+            label="Typ av ventilation"
+            value={form.ventilationType ?? ""}
+            onValueChange={(v) => set("ventilationType", v)}
+            options={ventOptions}
+            containerClassName="col-span-2 sm:col-span-2"
+          />
+          <BufferedField
+            label="Ombyggnadsår"
+            value={form.renovationYear ?? ""}
+            onValueChange={(v) => set("renovationYear", v)}
+            containerClassName="col-span-1 sm:col-span-2"
+          />
+          <BufferedField
+            label="Drifttider"
+            value={form.operatingHours ?? ""}
+            onValueChange={(v) => set("operatingHours", v)}
+            containerClassName="col-span-1 sm:col-span-2"
+          />
+          <BufferedField
+            label="Betjänad yta"
+            value={form.servedArea ?? ""}
+            onValueChange={(v) => set("servedArea", v)}
+            containerClassName="col-span-2 sm:col-span-2"
+          />
+          <BufferedField
+            label="Verksamhet"
+            value={form.business ?? ""}
+            onValueChange={(v) => set("business", v)}
+            containerClassName="col-span-2 sm:col-span-3"
+          />
+          <BufferedField
+            label="Antal lägenheter"
+            value={form.apartmentCount ?? ""}
+            onValueChange={(v) => set("apartmentCount", v)}
+            containerClassName="col-span-2 sm:col-span-1"
+          />
+        </div>
+      </div>
 
       <Section title="Besiktning">
         <SelectField
