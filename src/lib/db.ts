@@ -67,7 +67,6 @@ export interface Inspection {
   // Property data
   propertyDesignation: string; // Fastighetsbeteckning J7
   buildingYear?: string;
-  renovationYear?: string;
   address?: string;
   postalCode?: string;
   city?: string;

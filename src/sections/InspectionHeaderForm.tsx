@@ -30,7 +30,6 @@ export function InspectionHeaderForm({ inspection }: Props) {
   const [form, setForm] = useState({
     propertyDesignation: inspection.propertyDesignation ?? "",
     buildingYear: inspection.buildingYear ?? "",
-    renovationYear: inspection.renovationYear ?? "",
     address: inspection.address ?? "",
     postalCode: inspection.postalCode ?? "",
     city: inspection.city ?? "",
@@ -44,7 +43,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
     setForm({
       propertyDesignation: inspection.propertyDesignation ?? "",
       buildingYear: inspection.buildingYear ?? "",
-      renovationYear: inspection.renovationYear ?? "",
+      
       address: inspection.address ?? "",
       postalCode: inspection.postalCode ?? "",
       city: inspection.city ?? "",
@@ -65,11 +64,12 @@ export function InspectionHeaderForm({ inspection }: Props) {
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Auto-fill Byggnorm based on Byggår / Ombyggnadsår.
-  // Picks the norm with the highest year <= effective year (renovation wins if set).
+  // Auto-fill Byggnorm based on Byggår.
+  // Picks the norm with the highest year <= building year.
   // Only overwrites if current value is empty OR equals the previously auto-filled value.
   const sortedNorms = [...(norms ?? [])].sort((a, b) => Number(a.year || 0) - Number(b.year || 0));
-  const effectiveYearStr = form.renovationYear?.trim() || form.buildingYear?.trim() || "";
+  const effectiveYearStr = form.buildingYear?.trim() || "";
+
   const effectiveYear = Number(effectiveYearStr);
   const matchedNorm =
     effectiveYearStr && !Number.isNaN(effectiveYear)
@@ -135,14 +135,9 @@ export function InspectionHeaderForm({ inspection }: Props) {
           label="Byggår"
           value={form.buildingYear}
           onChange={(e) => set("buildingYear", e.target.value)}
-          containerClassName="col-span-1 sm:col-span-1"
+          containerClassName="col-span-2 sm:col-span-2"
         />
-        <Field
-          label="Ombyggnadsår"
-          value={form.renovationYear}
-          onChange={(e) => set("renovationYear", e.target.value)}
-          containerClassName="col-span-1 sm:col-span-1"
-        />
+
         <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-4">
           <div className="flex items-center justify-between">
             <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
