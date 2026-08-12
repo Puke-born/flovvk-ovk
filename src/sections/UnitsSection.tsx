@@ -10,6 +10,7 @@ import {
   STATUS_OPTIONS,
   REPLACEMENT_OPTIONS,
   INSPECTION_INTERVALS,
+  normForYear,
   type Unit,
 } from "@/lib/db";
 import { Card } from "@/components/ui/card";
@@ -296,6 +297,44 @@ const UnitEditor = memo(function UnitEditor({
     });
   }, [form.inspectionDate, form.inspectionInterval]);
 
+  // Byggnorm per aggregat: ombyggnadsår om ifyllt, annars fastighetens byggår.
+  const norms = useLiveQuery(() => db.buildingNorms.toArray(), [], []);
+  const normOptions: SelectOption[] = useMemo(
+    () =>
+      [...(norms ?? [])]
+        .sort((a, b) => Number(a.year || 0) - Number(b.year || 0))
+        .map((n) => ({ value: n.norm, label: `${n.year} — ${n.norm}` })),
+    [norms],
+  );
+  const normTouched = useRef(false);
+  const lastAutoNorm = useRef<string>(unit.buildingNorm ?? "");
+  const normYear = (form.renovationYear ?? "").trim() || (inspection?.buildingYear ?? "");
+  useEffect(() => {
+    const target = normForYear(norms ?? [], normYear);
+    if (!target) return;
+    setForm((f) => {
+      if (!f.buildingNorm || (!normTouched.current && f.buildingNorm === lastAutoNorm.current)) {
+        lastAutoNorm.current = target;
+        return { ...f, buildingNorm: target };
+      }
+      return f;
+    });
+  }, [normYear, norms]);
+
+  // Ändrat ombyggnadsår → låt automatiken ta över igen
+  const prevNormYear = useRef(normYear);
+  useEffect(() => {
+    if (prevNormYear.current !== normYear) {
+      prevNormYear.current = normYear;
+      normTouched.current = false;
+      const target = normForYear(norms ?? [], normYear);
+      if (target) {
+        lastAutoNorm.current = target;
+        setForm((f) => (f.buildingNorm === target ? f : { ...f, buildingNorm: target }));
+      }
+    }
+  }, [normYear, norms]);
+
   return (
     <Card className="p-4 sm:p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-2">
@@ -392,6 +431,16 @@ const UnitEditor = memo(function UnitEditor({
             value={form.apartmentCount ?? ""}
             onValueChange={(v) => set("apartmentCount", v)}
             containerClassName="col-span-2 sm:col-span-1"
+          />
+          <SelectField
+            label="Byggnorm"
+            value={form.buildingNorm ?? ""}
+            onValueChange={(v) => {
+              normTouched.current = true;
+              set("buildingNorm", v);
+            }}
+            options={normOptions}
+            containerClassName="col-span-2 sm:col-span-6"
           />
         </div>
       </div>

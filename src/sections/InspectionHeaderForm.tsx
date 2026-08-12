@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, updateInspection, assignInspector, uid, type Contact, type Inspection } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/Field";
-import { Input } from "@/components/ui/input";
+
 import { ContactPicker } from "@/components/ContactPicker";
 import { ContactDialog } from "@/components/ContactDialog";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
@@ -25,7 +25,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
   const owners = useLiveQuery(() => db.propertyOwners.toArray(), [], []);
   const ops = useLiveQuery(() => db.operationsManagers.toArray(), [], []);
   const inspectors = useLiveQuery(() => db.inspectors.toArray(), [], []);
-  const norms = useLiveQuery(() => db.buildingNorms.toArray(), [], []);
+  
 
   const [form, setForm] = useState({
     propertyDesignation: inspection.propertyDesignation ?? "",
@@ -34,7 +34,6 @@ export function InspectionHeaderForm({ inspection }: Props) {
     postalCode: inspection.postalCode ?? "",
     city: inspection.city ?? "",
     buildingId: inspection.buildingId ?? "",
-    buildingNorm: inspection.buildingNorm ?? "",
     workOrderNumber: inspection.workOrderNumber ?? "",
   });
 
@@ -48,7 +47,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
       postalCode: inspection.postalCode ?? "",
       city: inspection.city ?? "",
       buildingId: inspection.buildingId ?? "",
-      buildingNorm: inspection.buildingNorm ?? "",
+      
       workOrderNumber: inspection.workOrderNumber ?? "",
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -64,40 +63,6 @@ export function InspectionHeaderForm({ inspection }: Props) {
 
   const set = <K extends keyof typeof form>(k: K, v: (typeof form)[K]) => setForm((f) => ({ ...f, [k]: v }));
 
-  // Auto-fill Byggnorm based on Byggår.
-  // Picks the norm with the highest year <= building year.
-  // Only overwrites if current value is empty OR equals the previously auto-filled value.
-  const sortedNorms = [...(norms ?? [])].sort((a, b) => Number(a.year || 0) - Number(b.year || 0));
-  const effectiveYearStr = form.buildingYear?.trim() || "";
-
-  const effectiveYear = Number(effectiveYearStr);
-  const matchedNorm =
-    effectiveYearStr && !Number.isNaN(effectiveYear)
-      ? [...sortedNorms].reverse().find((n) => {
-          const y = Number(n.year);
-          return !Number.isNaN(y) && y <= effectiveYear;
-        })
-      : undefined;
-  const lastAutoFilled = useRef<string>(inspection.buildingNorm ?? "");
-  useEffect(() => {
-    if (!matchedNorm) return;
-    setForm((f) => {
-      if (!f.buildingNorm || f.buildingNorm === lastAutoFilled.current) {
-        lastAutoFilled.current = matchedNorm.norm;
-        return { ...f, buildingNorm: matchedNorm.norm };
-      }
-      return f;
-    });
-  }, [matchedNorm?.id, matchedNorm?.norm]);
-
-  // Allowed values for the select (saved norm strings). If current value isn't in the list,
-  // we render it as a free-text override row.
-  const normOptions = Array.from(new Set((norms ?? []).map((n) => n.norm).filter(Boolean)));
-  const isCustom = !!form.buildingNorm && !normOptions.includes(form.buildingNorm);
-  const [customMode, setCustomMode] = useState(isCustom);
-  useEffect(() => {
-    setCustomMode(isCustom);
-  }, [isCustom]);
 
   const [ownerDialog, setOwnerDialog] = useState(false);
   const [opsDialog, setOpsDialog] = useState(false);
@@ -116,86 +81,21 @@ export function InspectionHeaderForm({ inspection }: Props) {
           label="Arb.nr"
           value={form.workOrderNumber}
           onChange={(e) => set("workOrderNumber", e.target.value)}
-          containerClassName="col-span-1 sm:col-span-2"
+          containerClassName="col-span-1 sm:col-span-4"
         />
         <Field
           label="Bygg.ID"
           value={form.buildingId}
           onChange={(e) => set("buildingId", e.target.value)}
-          containerClassName="col-span-1 sm:col-span-2"
+          containerClassName="col-span-1 sm:col-span-4"
         />
         <Field
           label="Byggår"
           value={form.buildingYear}
           onChange={(e) => set("buildingYear", e.target.value)}
-          containerClassName="col-span-1 sm:col-span-2"
+          containerClassName="col-span-2 sm:col-span-4"
         />
 
-        <div className="flex flex-col gap-1.5 col-span-2 sm:col-span-6">
-          <div className="flex items-center justify-between">
-            <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Byggnorm
-            </Label>
-            <Link to="/settings" className="text-[10px] text-primary hover:underline">
-              Hantera
-            </Link>
-          </div>
-          {customMode || normOptions.length === 0 ? (
-            <div className="flex gap-1">
-              <Input
-                className="touch-input flex-1"
-                value={form.buildingNorm}
-                onChange={(e) => {
-                  lastAutoFilled.current = "";
-                  set("buildingNorm", e.target.value);
-                }}
-                placeholder={normOptions.length === 0 ? "Skriv byggnorm…" : "Egen byggnorm…"}
-              />
-              {normOptions.length > 0 && (
-                <button
-                  type="button"
-                  className="text-xs text-muted-foreground hover:text-foreground px-2"
-                  onClick={() => {
-                    lastAutoFilled.current = "";
-                    set("buildingNorm", "");
-                    setCustomMode(false);
-                  }}
-                >
-                  Lista
-                </button>
-              )}
-            </div>
-          ) : (
-            <Select
-              value={form.buildingNorm || "__none__"}
-              onValueChange={(v) => {
-                if (v === "__custom__") {
-                  setCustomMode(true);
-                  return;
-                }
-                lastAutoFilled.current = "";
-                set("buildingNorm", v === "__none__" ? "" : v);
-              }}
-            >
-              <SelectTrigger className="h-11 text-base">
-                <SelectValue placeholder="Välj byggnorm…" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">
-                  <span className="text-muted-foreground">— ingen vald —</span>
-                </SelectItem>
-                {sortedNorms.map((n) => (
-                  <SelectItem key={n.id} value={n.norm} className="text-base py-3">
-                    {n.year} — {n.norm}
-                  </SelectItem>
-                ))}
-                <SelectItem value="__custom__" className="text-base py-3">
-                  <span className="text-muted-foreground">+ Egen byggnorm…</span>
-                </SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-        </div>
         <Field
           label="Fastighetsbeteckning *"
           value={form.propertyDesignation}

@@ -71,7 +71,7 @@ export interface Inspection {
   postalCode?: string;
   city?: string;
   buildingId?: string;
-  buildingNorm?: string;
+  
   workOrderNumber?: string;
   // Linked
   propertyOwnerId?: string;
@@ -106,6 +106,7 @@ export interface Unit {
   placement?: string; // F16
   apartmentCount?: string;
   renovationYear?: string;
+  buildingNorm?: string;
   // Building/property (mostly inherited from inspection but editable per unit)
   ventilationType?: string;
   servedArea?: string;
@@ -190,6 +191,30 @@ class OvkDB extends Dexie {
       buildingNorms: "id, year",
       excelTemplate: "id",
     });
+    // v5: byggnorm flyttad från besiktning till aggregat
+    this.version(5)
+      .stores({
+        inspections: "id, createdAt, updatedAt, propertyDesignation, archived",
+        units: "id, inspectionId, order, updatedAt",
+        propertyOwners: "id, name",
+        operationsManagers: "id, name",
+        inspector: "id",
+        inspectors: "id, name",
+        buildingNorms: "id, year",
+        excelTemplate: "id",
+      })
+      .upgrade(async (tx) => {
+        const inspections = await tx.table("inspections").toArray();
+        const normById = new Map<string, string>(
+          inspections.map((i: { id: string; buildingNorm?: string }) => [i.id, i.buildingNorm ?? ""]),
+        );
+        await tx.table("units").toCollection().modify((u: Unit) => {
+          if (!u.buildingNorm) u.buildingNorm = normById.get(u.inspectionId) || "";
+        });
+        await tx.table("inspections").toCollection().modify((i: Record<string, unknown>) => {
+          delete i.buildingNorm;
+        });
+      });
   }
 }
 
@@ -299,4 +324,15 @@ export async function updateInspection(id: string, patch: Partial<Inspection>) {
 
 export async function updateUnit(id: string, patch: Partial<Unit>) {
   await db.units.update(id, { ...patch, updatedAt: Date.now() });
+}
+
+/** Senaste byggnorm vars år är <= angivet år. */
+export function normForYear(norms: BuildingNorm[], year?: string): string {
+  const y = Number((year ?? "").trim());
+  if (!year || Number.isNaN(y)) return "";
+  const match = [...norms]
+    .filter((n) => !Number.isNaN(Number(n.year)) && Number(n.year) <= y)
+    .sort((a, b) => Number(a.year) - Number(b.year))
+    .pop();
+  return match?.norm ?? "";
 }
