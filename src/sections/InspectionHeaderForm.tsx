@@ -81,19 +81,19 @@ export function InspectionHeaderForm({ inspection }: Props) {
           label="Arb.nr"
           value={form.workOrderNumber}
           onChange={(e) => set("workOrderNumber", e.target.value)}
-          containerClassName="col-span-1 sm:col-span-2"
+          containerClassName="col-span-1 sm:col-span-4"
         />
         <Field
           label="Bygg.ID"
           value={form.buildingId}
           onChange={(e) => set("buildingId", e.target.value)}
-          containerClassName="col-span-1 sm:col-span-2"
+          containerClassName="col-span-1 sm:col-span-4"
         />
         <Field
           label="Byggår"
           value={form.buildingYear}
           onChange={(e) => set("buildingYear", e.target.value)}
-          containerClassName="col-span-1 sm:col-span-2"
+          containerClassName="col-span-2 sm:col-span-4"
         />
 
         <Field
