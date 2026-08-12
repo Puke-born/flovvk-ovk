@@ -48,7 +48,7 @@ export function IntygView({ inspection }: Props) {
                 k="Adress"
                 v={[inspection.address, inspection.postalCode, inspection.city].filter(Boolean).join(", ")}
               />
-              <Row k="Byggnorm" v={inspection.buildingNorm} />
+              
               {owner && <Row k="Fastighetsägare" v={owner.name} />}
               {ops && <Row k="Driftansvarig" v={ops.name} />}
             </dl>
@@ -64,6 +64,7 @@ export function IntygView({ inspection }: Props) {
                   <TableRow>
                     <TableHead className="w-12">#</TableHead>
                     <TableHead>System</TableHead>
+                    <TableHead>Byggnorm</TableHead>
                     <TableHead>Betjänar</TableHead>
                     <TableHead>Utfall</TableHead>
                     <TableHead>Besiktningsdatum</TableHead>
@@ -76,6 +77,7 @@ export function IntygView({ inspection }: Props) {
                       <TableRow key={u.id}>
                         <TableCell className="font-medium">{i + 1}</TableCell>
                         <TableCell>{u.systemDesignation || "—"}</TableCell>
+                        <TableCell className="text-muted-foreground">{u.buildingNorm || "—"}</TableCell>
                         <TableCell className="text-muted-foreground">
                           {[u.placement, u.servedArea].filter(Boolean).join(" / ") || "—"}
                         </TableCell>
@@ -100,7 +102,7 @@ export function IntygView({ inspection }: Props) {
                     ))
                   ) : (
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                      <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
                         Inga aggregat ännu.
                       </TableCell>
                     </TableRow>
