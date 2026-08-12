@@ -1,10 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useLiveQuery } from "dexie-react-hooks";
 import { db, updateInspection, assignInspector, uid, type Contact, type Inspection } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Field } from "@/components/Field";
-import { Input } from "@/components/ui/input";
+
 import { ContactPicker } from "@/components/ContactPicker";
 import { ContactDialog } from "@/components/ContactDialog";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
@@ -25,7 +25,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
   const owners = useLiveQuery(() => db.propertyOwners.toArray(), [], []);
   const ops = useLiveQuery(() => db.operationsManagers.toArray(), [], []);
   const inspectors = useLiveQuery(() => db.inspectors.toArray(), [], []);
-  const norms = useLiveQuery(() => db.buildingNorms.toArray(), [], []);
+  
 
   const [form, setForm] = useState({
     propertyDesignation: inspection.propertyDesignation ?? "",
@@ -34,7 +34,6 @@ export function InspectionHeaderForm({ inspection }: Props) {
     postalCode: inspection.postalCode ?? "",
     city: inspection.city ?? "",
     buildingId: inspection.buildingId ?? "",
-    buildingNorm: inspection.buildingNorm ?? "",
     workOrderNumber: inspection.workOrderNumber ?? "",
   });
 
@@ -48,7 +47,7 @@ export function InspectionHeaderForm({ inspection }: Props) {
       postalCode: inspection.postalCode ?? "",
       city: inspection.city ?? "",
       buildingId: inspection.buildingId ?? "",
-      buildingNorm: inspection.buildingNorm ?? "",
+      
       workOrderNumber: inspection.workOrderNumber ?? "",
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
