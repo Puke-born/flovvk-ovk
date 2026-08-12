@@ -147,7 +147,7 @@ export const AVAILABLE_PLACEHOLDERS = {
     "postalCode",
     "city",
     "buildingId",
-    "buildingNorm (= första aggregatets byggnorm)",
+    "buildingNorm",
     "workOrderNumber",
   ],
   "Fastighetsägare (owner)": [
@@ -194,6 +194,7 @@ export const AVAILABLE_PLACEHOLDERS = {
     "unit.inspectionInterval",
     "unit.apartmentCount",
     "unit.renovationYear",
+    "unit.buildingNorm",
     "unit.inspectionType",
     "unit.inspectionDate",
     "unit.reInspectionDate",
