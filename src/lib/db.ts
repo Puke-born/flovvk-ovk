@@ -71,7 +71,7 @@ export interface Inspection {
   postalCode?: string;
   city?: string;
   buildingId?: string;
-  buildingNorm?: string;
+  
   workOrderNumber?: string;
   // Linked
   propertyOwnerId?: string;
@@ -106,6 +106,7 @@ export interface Unit {
   placement?: string; // F16
   apartmentCount?: string;
   renovationYear?: string;
+  buildingNorm?: string;
   // Building/property (mostly inherited from inspection but editable per unit)
   ventilationType?: string;
   servedArea?: string;
@@ -179,6 +180,16 @@ class OvkDB extends Dexie {
       inspector: "id",
       inspectors: "id, name",
       buildingNorms: "id, year",
+    });
+    this.version(5).stores({
+      inspections: "id, createdAt, updatedAt, propertyDesignation, archived",
+      units: "id, inspectionId, order, updatedAt",
+      propertyOwners: "id, name",
+      operationsManagers: "id, name",
+      inspector: "id",
+      inspectors: "id, name",
+      buildingNorms: "id, year",
+      excelTemplate: "id",
     });
     this.version(4).stores({
       inspections: "id, createdAt, updatedAt, propertyDesignation, archived",
