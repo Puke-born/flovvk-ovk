@@ -181,16 +181,6 @@ class OvkDB extends Dexie {
       inspectors: "id, name",
       buildingNorms: "id, year",
     });
-    this.version(5).stores({
-      inspections: "id, createdAt, updatedAt, propertyDesignation, archived",
-      units: "id, inspectionId, order, updatedAt",
-      propertyOwners: "id, name",
-      operationsManagers: "id, name",
-      inspector: "id",
-      inspectors: "id, name",
-      buildingNorms: "id, year",
-      excelTemplate: "id",
-    });
     this.version(4).stores({
       inspections: "id, createdAt, updatedAt, propertyDesignation, archived",
       units: "id, inspectionId, order, updatedAt",
@@ -201,6 +191,30 @@ class OvkDB extends Dexie {
       buildingNorms: "id, year",
       excelTemplate: "id",
     });
+    // v5: byggnorm flyttad från besiktning till aggregat
+    this.version(5)
+      .stores({
+        inspections: "id, createdAt, updatedAt, propertyDesignation, archived",
+        units: "id, inspectionId, order, updatedAt",
+        propertyOwners: "id, name",
+        operationsManagers: "id, name",
+        inspector: "id",
+        inspectors: "id, name",
+        buildingNorms: "id, year",
+        excelTemplate: "id",
+      })
+      .upgrade(async (tx) => {
+        const inspections = await tx.table("inspections").toArray();
+        const normById = new Map<string, string>(
+          inspections.map((i: { id: string; buildingNorm?: string }) => [i.id, i.buildingNorm ?? ""]),
+        );
+        await tx.table("units").toCollection().modify((u: Unit) => {
+          if (!u.buildingNorm) u.buildingNorm = normById.get(u.inspectionId) || "";
+        });
+        await tx.table("inspections").toCollection().modify((i: Record<string, unknown>) => {
+          delete i.buildingNorm;
+        });
+      });
   }
 }
 
