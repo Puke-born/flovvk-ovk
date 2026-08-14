@@ -8,8 +8,21 @@ import Home from "./pages/Home";
 import InspectionPage from "./pages/InspectionPage";
 import SettingsPage from "./pages/SettingsPage";
 import NotFound from "./pages/NotFound.tsx";
+import { useEnterAsTab } from "./hooks/useEnterAsTab";
 
 const queryClient = new QueryClient();
+
+const AppRoutes = () => {
+  useEnterAsTab();
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/inspection/:id" element={<InspectionPage />} />
+      <Route path="/settings" element={<SettingsPage />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
+  );
+};
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -18,12 +31,7 @@ const App = () => (
       <Sonner />
       <UpdatePrompt />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/inspection/:id" element={<InspectionPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AppRoutes />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

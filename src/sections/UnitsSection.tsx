@@ -624,7 +624,7 @@ const GridCellEditor = memo(function GridCellEditor({
         if (e.key === "Enter") {
           e.preventDefault();
           commit();
-          onMoveAfterCommit(1, 0);
+          onMoveAfterCommit(0, e.shiftKey ? -1 : 1);
         } else if (e.key === "Tab") {
           e.preventDefault();
           commit();
@@ -840,6 +840,9 @@ const RemarksGrid = memo(function RemarksGrid({
         move(0, e.shiftKey ? -1 : 1);
         return;
       case "Enter":
+        e.preventDefault();
+        move(0, e.shiftKey ? -1 : 1);
+        return;
       case "F2":
         e.preventDefault();
         startEdit();
@@ -927,6 +930,7 @@ const RemarksGrid = memo(function RemarksGrid({
     <div
       ref={containerRef}
       tabIndex={0}
+      data-enter-nav="self"
       onKeyDown={onKeyDown}
       onCopy={onCopy}
       onCut={onCut}
