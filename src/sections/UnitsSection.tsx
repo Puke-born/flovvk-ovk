@@ -840,6 +840,9 @@ const RemarksGrid = memo(function RemarksGrid({
         move(0, e.shiftKey ? -1 : 1);
         return;
       case "Enter":
+        e.preventDefault();
+        move(0, e.shiftKey ? -1 : 1);
+        return;
       case "F2":
         e.preventDefault();
         startEdit();
