@@ -927,6 +927,7 @@ const RemarksGrid = memo(function RemarksGrid({
     <div
       ref={containerRef}
       tabIndex={0}
+      data-enter-nav="self"
       onKeyDown={onKeyDown}
       onCopy={onCopy}
       onCut={onCut}
