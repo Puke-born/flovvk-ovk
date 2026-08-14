@@ -624,7 +624,7 @@ const GridCellEditor = memo(function GridCellEditor({
         if (e.key === "Enter") {
           e.preventDefault();
           commit();
-          onMoveAfterCommit(1, 0);
+          onMoveAfterCommit(0, e.shiftKey ? -1 : 1);
         } else if (e.key === "Tab") {
           e.preventDefault();
           commit();
