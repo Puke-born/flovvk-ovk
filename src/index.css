@@ -45,6 +45,13 @@
 
     --radius: 0.625rem;
 
+    /* Luftflödesprotokoll (LFP) rutnät */
+    --grid-border: 30 12% 80%;
+    --grid-header: 0 0% 12%;
+    --grid-header-foreground: 0 0% 98%;
+    --grid-cell: 0 0% 100%;
+    --grid-cell-alt: 30 15% 97%;
+
     --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 95%;
     --sidebar-primary: 29 70% 55%;
@@ -75,6 +82,11 @@
     --border: 0 0% 18%;
     --input: 0 0% 20%;
     --ring: 29 70% 55%;
+    --grid-border: 0 0% 24%;
+    --grid-header: 0 0% 16%;
+    --grid-header-foreground: 30 15% 95%;
+    --grid-cell: 0 0% 11%;
+    --grid-cell-alt: 0 0% 13%;
   }
 }
 

@@ -92,6 +92,39 @@ export interface Inspection {
   archived?: boolean;
 }
 
+/** Ett luftflödesprotokoll-blad (samma struktur som LFP-appens `Sheet`). */
+export interface LfpSheet {
+  id: string;
+  name: string;
+  kund?: string;
+  anlaggning?: string;
+  utfordAv?: string;
+  arbNr?: string;
+  datum?: string;
+  system?: string;
+  plan?: string;
+  rows: Record<string, string>[]; // 36 rader
+  notes: string;
+  /** rowIndex -> colKey -> hex färg */
+  cellColors?: Record<string, Record<string, string>>;
+  /** rowIndex -> lista med colKeys som importerats (Set kan inte lagras i IndexedDB) */
+  importedCells?: Record<string, string[]>;
+}
+
+export const LFP_ROW_COUNT = 36;
+export const LFP_COL_KEYS = [
+  "rum_nr",
+  "rum_namn",
+  "tilluft_dontyp",
+  "tilluft_inst",
+  "tilluft_beraknat",
+  "tilluft_uppmat",
+  "franluft_dontyp",
+  "franluft_inst",
+  "franluft_beraknat",
+  "franluft_uppmat",
+] as const;
+
 export interface Unit {
   id: string;
   inspectionId: string;
@@ -129,6 +162,8 @@ export interface Unit {
   notes?: string;
   // Free-form grid for remarks: 30 rows × 13 cols, sparse. Exports to H21:T50.
   gridCells?: string[][];
+  /** Kopplade luftflödesprotokoll */
+  lfpSheets?: LfpSheet[];
 }
 
 export interface ExcelTemplate {
