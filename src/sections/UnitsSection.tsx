@@ -424,13 +424,13 @@ const UnitEditor = memo(function UnitEditor({
             label="Verksamhet"
             value={form.business ?? ""}
             onValueChange={(v) => set("business", v)}
-            containerClassName="col-span-2 sm:col-span-3"
+            containerClassName="col-span-2 sm:col-span-2"
           />
           <BufferedField
             label="Antal lägenheter"
             value={form.apartmentCount ?? ""}
             onValueChange={(v) => set("apartmentCount", v)}
-            containerClassName="col-span-2 sm:col-span-1"
+            containerClassName="col-span-2 sm:col-span-2"
           />
           <SelectField
             label="Byggnorm"
