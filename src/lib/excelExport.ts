@@ -290,9 +290,34 @@ export async function exportInspectionToExcel(inspectionId: string): Promise<voi
   // Find aggregate template sheet by exact name
   const tplSheet = wb.getWorksheet(TEMPLATE_SHEET_NAME);
 
+  // LFP-mall: flik "LFP" i huvudmallen, annars separat uppladdad LFP-mall
+  const inlineLfpSheet = wb.getWorksheet(LFP_TEMPLATE_SHEET_NAME);
+  let lfpTemplateModel: ExcelJS.WorksheetModel | null = null;
+  if (inlineLfpSheet) {
+    lfpTemplateModel = JSON.parse(JSON.stringify(inlineLfpSheet.model));
+  } else {
+    const lfpTpl = await db.excelTemplate.get("lfpTemplate");
+    if (lfpTpl) {
+      const lwb = new ExcelJS.Workbook();
+      await lwb.xlsx.load(lfpTpl.data);
+      const first = lwb.worksheets[0];
+      if (first) lfpTemplateModel = JSON.parse(JSON.stringify(first.model));
+    }
+  }
+
+  const lfpDefaults = {
+    kund: data.owner.name,
+    anlaggning: data.inspection.propertyDesignation,
+    utfordAv: data.inspector.name,
+    arbNr: data.inspection.workOrderNumber,
+  };
+
   // Process non-aggregate sheets. If a sheet has unit.* rows and more units
   // exist than slots, duplicate the sheet so all units are represented.
-  const nonAggSheets = wb.worksheets.filter((ws) => ws.name !== TEMPLATE_SHEET_NAME);
+  const nonAggSheets = wb.worksheets.filter(
+    (ws) => ws.name !== TEMPLATE_SHEET_NAME && ws.name !== LFP_TEMPLATE_SHEET_NAME,
+  );
+  const orderedNames: string[] = nonAggSheets.map((ws) => ws.name);
   nonAggSheets.forEach((ws) => {
     const slotCount = countUnitRows(ws);
     if (slotCount === 0 || data.units.length <= Math.max(slotCount, 1)) {
@@ -317,12 +342,13 @@ export async function exportInspectionToExcel(inspectionId: string): Promise<voi
       const newId = (newSheet as any).id;
       newSheet.model = { ...m, id: newId, name };
       processSheetWithUnitRows(newSheet, data, wb, chunks[i]);
+      orderedNames.splice(orderedNames.indexOf(baseName) + i, 0, name);
     }
   });
 
+  let missingLfpTemplate = false;
+
   if (tplSheet && data.units.length > 0) {
-    // Position to insert duplicated sheets — keep them where the template was
-    const tplIndex = wb.worksheets.indexOf(tplSheet);
     // We will copy the model for each unit
     const tplModel = JSON.parse(JSON.stringify(tplSheet.model));
 
@@ -341,16 +367,51 @@ export async function exportInspectionToExcel(inspectionId: string): Promise<voi
       newSheet.model = { ...model, id: newId, name };
       processSheet(newSheet, data, unit, wb);
       writeUnitGrid(newSheet, rawUnits[i]?.gridCells);
+      orderedNames.push(name);
+
+      // LFP-flikar direkt efter aggregatfliken
+      const lfpSheets = rawUnits[i]?.lfpSheets ?? [];
+      if (lfpSheets.length === 0) return;
+      if (!lfpTemplateModel) {
+        missingLfpTemplate = true;
+        return;
+      }
+      lfpSheets.forEach((sheet, j) => {
+        const lfpName = uniqueSheetName(
+          wb,
+          sanitizeSheetName(sheet.name || `LFP ${baseName}`, `LFP ${i + 1}-${j + 1}`),
+        );
+        const lfpWs = wb.addWorksheet(lfpName);
+        const lfpModel = JSON.parse(JSON.stringify(lfpTemplateModel));
+        const lfpId = (lfpWs as any).id;
+        lfpWs.model = { ...lfpModel, id: lfpId, name: lfpName };
+        fillLfpSheet(lfpWs, sheet, `${j + 1}/${lfpSheets.length}`, {
+          ...lfpDefaults,
+          system: unit.systemDesignation,
+          datum: unit.inspectionDate,
+        });
+        orderedNames.push(lfpName);
+      });
     });
 
-    // Move duplicated sheets to where the template was, then remove the template
-    // exceljs doesn't expose reorder cleanly; removing template is sufficient — new sheets sit at end.
     wb.removeWorksheet(tplSheet.id);
-    void tplIndex;
   } else if (tplSheet && data.units.length === 0) {
     // No units — just remove the template sheet so the file isn't littered with placeholders
     wb.removeWorksheet(tplSheet.id);
   }
+
+  if (inlineLfpSheet) wb.removeWorksheet(inlineLfpSheet.id);
+
+  // Sätt flikordning: Intyg → LB01 → LFP LB01 → LB02 → …
+  orderedNames.forEach((name, i) => {
+    const ws = wb.getWorksheet(name);
+    if (ws) (ws as unknown as { orderNo: number }).orderNo = i + 1;
+  });
+
+  if (missingLfpTemplate) {
+    console.warn("LFP-mall saknas — LFP-flikar hoppades över.");
+  }
+
 
   const buf = await wb.xlsx.writeBuffer();
   const blob = new Blob([buf], {
