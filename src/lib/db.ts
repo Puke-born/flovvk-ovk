@@ -250,6 +250,23 @@ class OvkDB extends Dexie {
           delete i.buildingNorm;
         });
       });
+    // v6: luftflödesprotokoll (LFP) per aggregat
+    this.version(6)
+      .stores({
+        inspections: "id, createdAt, updatedAt, propertyDesignation, archived",
+        units: "id, inspectionId, order, updatedAt",
+        propertyOwners: "id, name",
+        operationsManagers: "id, name",
+        inspector: "id",
+        inspectors: "id, name",
+        buildingNorms: "id, year",
+        excelTemplate: "id",
+      })
+      .upgrade(async (tx) => {
+        await tx.table("units").toCollection().modify((u: Unit) => {
+          if (!u.lfpSheets) u.lfpSheets = [];
+        });
+      });
   }
 }
 
