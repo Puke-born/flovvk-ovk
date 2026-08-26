@@ -378,6 +378,29 @@ export async function updateUnit(id: string, patch: Partial<Unit>) {
   await db.units.update(id, { ...patch, updatedAt: Date.now() });
 }
 
+/** Nytt tomt LFP-blad. */
+export function emptyLfpSheet(name: string, partial?: Partial<LfpSheet>): LfpSheet {
+  return {
+    id: uid(),
+    name,
+    rows: Array.from({ length: LFP_ROW_COUNT }, () => ({})),
+    notes: "",
+    cellColors: {},
+    importedCells: {},
+    ...partial,
+  };
+}
+
+/** Auto-namn för LFP-blad kopplat till ett aggregat: "LFP LB01", "LFP LB01 (2)" … */
+export function nextLfpSheetName(systemDesignation: string, existing: LfpSheet[]): string {
+  const base = `LFP ${(systemDesignation || "Aggregat").trim()}`.trim();
+  const taken = new Set(existing.map((s) => s.name));
+  if (!taken.has(base)) return base;
+  let i = 2;
+  while (taken.has(`${base} (${i})`)) i++;
+  return `${base} (${i})`;
+}
+
 /** Senaste byggnorm vars år är <= angivet år. */
 export function normForYear(norms: BuildingNorm[], year?: string): string {
   const y = Number((year ?? "").trim());
