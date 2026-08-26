@@ -7,9 +7,12 @@ import {
   type UnitData,
 } from "./excelPlaceholders";
 
+import { fillLfpSheet } from "./lfpExport";
+
 const PLACEHOLDER_RE = /\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/g;
 const SIGNATURE_RE = /^\s*\{\{\s*inspector\.signature\s*\}\}\s*$/;
 const TEMPLATE_SHEET_NAME = "Aggregat";
+const LFP_TEMPLATE_SHEET_NAME = "LFP";
 
 /**
  * Convert near-white pixels in a PNG/JPEG data URL to transparent.
