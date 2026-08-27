@@ -1,26 +1,22 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Trash2, Copy } from "lucide-react";
+import { Trash2, Copy } from "lucide-react";
 import {
   db,
-  addUnit,
   updateUnit,
-  duplicateUnit,
-  deleteUnit,
   STATUS_OPTIONS,
   REPLACEMENT_OPTIONS,
   INSPECTION_INTERVALS,
   normForYear,
   type Unit,
-  type LfpSheet,
 } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BufferedField } from "@/components/Field";
 import { SelectField, type SelectOption } from "@/components/SelectField";
-import { LfpSection } from "@/sections/LfpSection";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 import { cn } from "@/lib/utils";
+
 
 const VENT_TYPE_LABELS: Record<string, string> = {
   S: "S - Självdrag",
@@ -108,110 +104,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 
-interface Props {
-  inspectionId: string;
-}
-
-export function UnitsSection({ inspectionId }: Props) {
-  const units = useLiveQuery(
-    () => db.units.where("inspectionId").equals(inspectionId).sortBy("order"),
-    [inspectionId],
-    [],
-  );
-  const [activeId, setActiveId] = useState<string | null>(null);
-
-  useEffect(() => {
-    if (units && units.length > 0 && !units.find((u) => u.id === activeId)) {
-      setActiveId(units[0].id);
-    }
-    if (units && units.length === 0) setActiveId(null);
-  }, [units, activeId]);
-
-  const active = units?.find((u) => u.id === activeId) ?? null;
-
-  const handleAdd = async () => {
-    const id = await addUnit(inspectionId);
-    setActiveId(id);
-  };
-
-  return (
-    <div className="grid grid-cols-1 lg:grid-cols-[260px_1fr] gap-4">
-      {/* Sidebar */}
-      <Card className="p-3 lg:sticky lg:top-20 lg:self-start lg:max-h-[calc(100vh-6rem)] overflow-auto">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="font-semibold">Aggregat ({units?.length ?? 0})</h3>
-        </div>
-        <div className="space-y-1">
-          {units?.map((u, i) => (
-            <button
-              key={u.id}
-              onClick={() => setActiveId(u.id)}
-              className={cn(
-                "w-full text-left rounded-md px-3 py-3 min-h-[52px] text-sm transition-colors flex items-center gap-2",
-                activeId === u.id
-                  ? "bg-primary text-primary-foreground"
-                  : "hover:bg-accent text-foreground",
-              )}
-            >
-              <span
-                className={cn(
-                  "inline-flex h-6 w-6 items-center justify-center rounded text-xs font-bold shrink-0",
-                  activeId === u.id ? "bg-primary-foreground/20" : "bg-muted",
-                )}
-              >
-                {i + 1}
-              </span>
-              <span className="truncate flex-1">{u.systemDesignation || "Namnlös"}</span>
-              {u.verdict && (
-                <span
-                  className={cn(
-                    "text-[10px] font-bold px-1.5 py-0.5 rounded shrink-0",
-                    u.verdict === "G"
-                      ? "bg-success/20 text-success"
-                      : "bg-destructive/20 text-destructive",
-                    activeId === u.id && "bg-primary-foreground/20 text-primary-foreground",
-                  )}
-                >
-                  {u.verdict}
-                </span>
-              )}
-            </button>
-          ))}
-        </div>
-        <Button onClick={handleAdd} className="w-full mt-3 touch-button" size="lg">
-          <Plus className="h-5 w-5 mr-2" />
-          Lägg till aggregat
-        </Button>
-      </Card>
-
-      {/* Editor */}
-      <div>
-        {active ? (
-          <UnitEditor key={active.id} unit={active} onDuplicate={async () => {
-            const id = await duplicateUnit(active.id);
-            if (id) {
-              setActiveId(id);
-              toast.success("Aggregat duplicerat");
-            }
-          }} onDelete={async () => {
-            await deleteUnit(active.id);
-            toast.success("Aggregat raderat");
-          }} />
-        ) : (
-          <Card className="p-10 text-center border-dashed">
-            <p className="text-muted-foreground mb-4">Inga aggregat ännu.</p>
-            <Button onClick={handleAdd} size="lg" className="touch-button">
-              <Plus className="h-5 w-5 mr-2" />
-              Lägg till första aggregatet
-            </Button>
-          </Card>
-        )}
-      </div>
-    </div>
-  );
-}
-
-const UnitEditor = memo(function UnitEditor({
+export const UnitEditor = memo(function UnitEditor({
   unit,
   onDuplicate,
   onDelete,
@@ -220,6 +113,7 @@ const UnitEditor = memo(function UnitEditor({
   onDuplicate: () => void;
   onDelete: () => void;
 }) {
+
   const [form, setForm] = useState<Unit>(unit);
 
   useEffect(() => {
@@ -229,7 +123,7 @@ const UnitEditor = memo(function UnitEditor({
 
   useDebouncedEffect(
     () => {
-      const { id, inspectionId, createdAt, updatedAt, order, ...patch } = form;
+      const { id, inspectionId, createdAt, updatedAt, order, lfpSheets, ...patch } = form;
       updateUnit(unit.id, patch);
     },
     [form],
@@ -243,11 +137,7 @@ const UnitEditor = memo(function UnitEditor({
     (next: string[][]) => setForm((f) => (f.gridCells === next ? f : { ...f, gridCells: next })),
     [],
   );
-  const [lfpOpen, setLfpOpen] = useState(false);
-  const handleLfpChange = useCallback(
-    (next: LfpSheet[]) => setForm((f) => (f.lfpSheets === next ? f : { ...f, lfpSheets: next })),
-    [],
-  );
+
 
   // Hämta inspektionen för att veta vald besiktningsmans behörighet
   const inspection = useLiveQuery(() => db.inspections.get(unit.inspectionId), [unit.inspectionId]);
@@ -503,25 +393,8 @@ const UnitEditor = memo(function UnitEditor({
         </div>
       </Section>
 
-      <div>
-        <button
-          type="button"
-          onClick={() => setLfpOpen((o) => !o)}
-          className="w-full flex items-center justify-between text-sm font-bold uppercase tracking-wide text-primary mb-3 pb-1 border-b border-primary/20"
-        >
-          <span>Luftflödesprotokoll (LFP) {form.lfpSheets?.length ? `(${form.lfpSheets.length})` : ""}</span>
-          <span className="text-xs normal-case font-medium text-muted-foreground">
-            {lfpOpen ? "Dölj" : "Visa"}
-          </span>
-        </button>
-        {lfpOpen && (
-          <LfpSection
-            systemDesignation={form.systemDesignation}
-            sheets={form.lfpSheets ?? []}
-            onChange={handleLfpChange}
-          />
-        )}
-      </div>
+
+
 
       <Section title="Bedömning">
         <SelectField

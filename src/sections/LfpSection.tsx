@@ -1,9 +1,10 @@
-import { memo, useCallback, useMemo, useRef, useState } from "react";
-import { Plus, Upload, Trash2, Copy, Paintbrush } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Upload, Trash2, Copy, Paintbrush } from "lucide-react";
 import { toast } from "sonner";
 import AirflowGrid, { type GridRow } from "@/components/AirflowGrid";
 import NotesGrid from "@/components/NotesGrid";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
@@ -15,9 +16,18 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { emptyLfpSheet, nextLfpSheetName, LFP_ROW_COUNT, type LfpSheet } from "@/lib/db";
+import {
+  addLfpSheets,
+  deleteLfpSheet,
+  emptyLfpSheet,
+  nextLfpSheetName,
+  saveLfpSheet,
+  uid,
+  LFP_ROW_COUNT,
+  type LfpSheet,
+} from "@/lib/db";
 import { getSheetNames, importSheets } from "@/lib/lfpImport";
-import { cn } from "@/lib/utils";
+import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 
 const COLOR_SWATCHES = [
   { label: "Ingen", value: "" },
@@ -29,13 +39,23 @@ const COLOR_SWATCHES = [
 ];
 
 interface Props {
+  unitId: string;
   systemDesignation: string;
+  /** Alla blad på aggregatet (för namngivning) */
   sheets: LfpSheet[];
-  onChange: (next: LfpSheet[]) => void;
+  /** Bladet som visas */
+  sheet: LfpSheet;
+  onSelectSheet: (sheetId: string | null) => void;
 }
 
-export const LfpSection = memo(function LfpSection({ systemDesignation, sheets, onChange }: Props) {
-  const [activeId, setActiveId] = useState<string | null>(sheets[0]?.id ?? null);
+export const LfpSection = memo(function LfpSection({
+  unitId,
+  systemDesignation,
+  sheets,
+  sheet,
+  onSelectSheet,
+}: Props) {
+  const [draft, setDraft] = useState<LfpSheet>(sheet);
   const [selected, setSelected] = useState<{ row: number; colKey: string } | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importNames, setImportNames] = useState<string[]>([]);
@@ -44,79 +64,74 @@ export const LfpSection = memo(function LfpSection({ systemDesignation, sheets, 
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingFile = useRef<{ buffer: ArrayBuffer; name: string } | null>(null);
 
-  const active = sheets.find((s) => s.id === activeId) ?? sheets[0] ?? null;
+  useEffect(() => {
+    setDraft(sheet);
+    setSelected(null);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheet.id]);
 
-  const patchActive = useCallback(
-    (patch: Partial<LfpSheet>) => {
-      if (!active) return;
-      onChange(sheets.map((s) => (s.id === active.id ? { ...s, ...patch } : s)));
+  useDebouncedEffect(
+    () => {
+      void saveLfpSheet(unitId, draft);
     },
-    [active, onChange, sheets],
+    [draft],
+    500,
   );
 
-  const addSheet = useCallback(() => {
-    const sheet = emptyLfpSheet(nextLfpSheetName(systemDesignation, sheets));
-    onChange([...sheets, sheet]);
-    setActiveId(sheet.id);
-  }, [onChange, sheets, systemDesignation]);
+  const patch = useCallback((p: Partial<LfpSheet>) => setDraft((d) => ({ ...d, ...p })), []);
 
-  const duplicateSheet = useCallback(() => {
-    if (!active) return;
+  const duplicateSheet = useCallback(async () => {
     const copy: LfpSheet = {
-      ...structuredClone(active),
-      id: crypto.randomUUID(),
+      ...structuredClone(draft),
+      id: uid(),
       name: nextLfpSheetName(systemDesignation, sheets),
     };
-    onChange([...sheets, copy]);
-    setActiveId(copy.id);
-  }, [active, onChange, sheets, systemDesignation]);
+    await addLfpSheets(unitId, [copy]);
+    onSelectSheet(copy.id);
+  }, [draft, onSelectSheet, sheets, systemDesignation, unitId]);
 
-  const deleteSheet = useCallback(() => {
-    if (!active) return;
-    const next = sheets.filter((s) => s.id !== active.id);
-    onChange(next);
-    setActiveId(next[0]?.id ?? null);
-  }, [active, onChange, sheets]);
+  const removeSheet = useCallback(async () => {
+    await deleteLfpSheet(unitId, draft.id);
+    onSelectSheet(null);
+  }, [draft.id, onSelectSheet, unitId]);
 
-  const handleCellChange = useCallback(
-    (rowIndex: number, colKey: string, value: string) => {
-      if (!active) return;
-      const rows = active.rows.map((r, i) => (i === rowIndex ? { ...r, [colKey]: value } : r));
-      patchActive({ rows });
-    },
-    [active, patchActive],
-  );
+  const handleCellChange = useCallback((rowIndex: number, colKey: string, value: string) => {
+    setDraft((d) => ({
+      ...d,
+      rows: d.rows.map((r, i) => (i === rowIndex ? { ...r, [colKey]: value } : r)),
+    }));
+  }, []);
 
-  const handleRowReorder = useCallback(
-    (from: number, to: number) => {
-      if (!active) return;
-      const rows = [...active.rows];
+  const handleRowReorder = useCallback((from: number, to: number) => {
+    setDraft((d) => {
+      const rows = [...d.rows];
       const [moved] = rows.splice(from, 1);
       rows.splice(to, 0, moved);
-      patchActive({ rows });
-    },
-    [active, patchActive],
-  );
+      return { ...d, rows };
+    });
+  }, []);
 
   const applyColor = useCallback(
     (hex: string) => {
-      if (!active || !selected) return;
-      const colors: Record<string, Record<string, string>> = { ...(active.cellColors ?? {}) };
-      const rowKey = String(selected.row);
-      const row = { ...(colors[rowKey] ?? {}) };
-      if (hex) row[selected.colKey] = hex;
-      else delete row[selected.colKey];
-      if (Object.keys(row).length) colors[rowKey] = row;
-      else delete colors[rowKey];
-      patchActive({ cellColors: colors });
+      if (!selected) return;
+      setDraft((d) => {
+        const colors: Record<string, Record<string, string>> = { ...(d.cellColors ?? {}) };
+        const rowKey = String(selected.row);
+        const row = { ...(colors[rowKey] ?? {}) };
+        if (hex) row[selected.colKey] = hex;
+        else delete row[selected.colKey];
+        if (Object.keys(row).length) colors[rowKey] = row;
+        else delete colors[rowKey];
+        return { ...d, cellColors: colors };
+      });
     },
-    [active, patchActive, selected],
+    [selected],
   );
 
   const importedSets = useMemo(() => {
-    const map = active?.importedCells ?? {};
+    const map = draft.importedCells ?? {};
     return Array.from({ length: LFP_ROW_COUNT }, (_, i) => new Set(map[String(i)] ?? []));
-  }, [active]);
+  }, [draft]);
 
   const onPickFile = useCallback(async (file: File) => {
     try {
@@ -145,16 +160,16 @@ export const LfpSection = memo(function LfpSection({ systemDesignation, sheets, 
           const keys = Object.keys(row).filter((k) => (row[k] ?? "") !== "");
           if (keys.length) importedCells[String(i)] = keys;
         });
-        const sheet = emptyLfpSheet(nextLfpSheetName(systemDesignation, pool), {
+        const s = emptyLfpSheet(nextLfpSheetName(systemDesignation, pool), {
           rows: imp.rows,
           notes: imp.notes,
           importedCells,
         });
-        pool = [...pool, sheet];
-        created.push(sheet);
+        pool = [...pool, s];
+        created.push(s);
       }
-      onChange([...sheets, ...created]);
-      setActiveId(created[0]?.id ?? activeId);
+      await addLfpSheets(unitId, created);
+      if (created[0]) onSelectSheet(created[0].id);
       setImportOpen(false);
       toast.success(`${created.length} blad importerade`);
     } catch {
@@ -162,29 +177,28 @@ export const LfpSection = memo(function LfpSection({ systemDesignation, sheets, 
     } finally {
       setImporting(false);
     }
-  }, [activeId, importPicked, onChange, sheets, systemDesignation]);
+  }, [importPicked, onSelectSheet, sheets, systemDesignation, unitId]);
 
   return (
-    <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-2">
-        <div className="flex flex-wrap items-center gap-1 flex-1">
-          {sheets.map((s) => (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => setActiveId(s.id)}
-              className={cn(
-                "rounded-md px-3 py-2 text-sm border transition-colors",
-                s.id === active?.id
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background hover:bg-accent border-border",
-              )}
-            >
-              {s.name}
-            </button>
-          ))}
+    <Card className="p-4 sm:p-6 space-y-3">
+      <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
+        <div className="col-span-2">
+          <Label className="text-xs">Bladnamn</Label>
+          <Input value={draft.name} onChange={(e) => patch({ name: e.target.value })} />
         </div>
-        <div className="flex items-center gap-2">
+        <div className="col-span-1">
+          <Label className="text-xs">Plan</Label>
+          <Input value={draft.plan ?? ""} onChange={(e) => patch({ plan: e.target.value })} />
+        </div>
+        <div className="col-span-1">
+          <Label className="text-xs">System</Label>
+          <Input
+            value={draft.system ?? ""}
+            placeholder={systemDesignation}
+            onChange={(e) => patch({ system: e.target.value })}
+          />
+        </div>
+        <div className="col-span-2 flex items-end gap-2 flex-wrap">
           <input
             ref={fileRef}
             type="file"
@@ -200,84 +214,51 @@ export const LfpSection = memo(function LfpSection({ systemDesignation, sheets, 
             <Upload className="h-4 w-4 mr-2" />
             Importera
           </Button>
-          <Button type="button" variant="outline" size="sm" onClick={addSheet}>
-            <Plus className="h-4 w-4 mr-2" />
-            Nytt blad
+          <Button type="button" variant="outline" size="sm" onClick={duplicateSheet}>
+            <Copy className="h-4 w-4 mr-2" />
+            Duplicera
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="text-destructive hover:text-destructive"
+            onClick={removeSheet}
+          >
+            <Trash2 className="h-4 w-4 mr-2" />
+            Radera blad
           </Button>
         </div>
       </div>
 
-      {!active ? (
-        <p className="text-sm text-muted-foreground">
-          Inga luftflödesprotokoll ännu. Skapa ett nytt blad eller importera ett tidigare protokoll.
-        </p>
-      ) : (
-        <div className="space-y-3">
-          <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
-            <div className="col-span-2">
-              <Label className="text-xs">Bladnamn</Label>
-              <Input value={active.name} onChange={(e) => patchActive({ name: e.target.value })} />
-            </div>
-            <div className="col-span-1">
-              <Label className="text-xs">Plan</Label>
-              <Input value={active.plan ?? ""} onChange={(e) => patchActive({ plan: e.target.value })} />
-            </div>
-            <div className="col-span-1">
-              <Label className="text-xs">System</Label>
-              <Input
-                value={active.system ?? ""}
-                placeholder={systemDesignation}
-                onChange={(e) => patchActive({ system: e.target.value })}
-              />
-            </div>
-            <div className="col-span-2 flex items-end gap-2">
-              <Button type="button" variant="outline" size="sm" onClick={duplicateSheet}>
-                <Copy className="h-4 w-4 mr-2" />
-                Duplicera
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="text-destructive hover:text-destructive"
-                onClick={deleteSheet}
-              >
-                <Trash2 className="h-4 w-4 mr-2" />
-                Radera blad
-              </Button>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2 flex-wrap">
-            <Paintbrush className="h-4 w-4 text-muted-foreground" />
-            <span className="text-xs text-muted-foreground">
-              {selected ? "Färglägg markerad cell:" : "Markera en cell för att färglägga"}
-            </span>
-            {COLOR_SWATCHES.map((c) => (
-              <button
-                key={c.label}
-                type="button"
-                disabled={!selected}
-                title={c.label}
-                onClick={() => applyColor(c.value)}
-                className="h-6 w-6 rounded border border-border disabled:opacity-40"
-                style={{ background: c.value || "transparent" }}
-              />
-            ))}
-          </div>
-
-          <AirflowGrid
-            rows={active.rows}
-            importedCells={importedSets}
-            cellColors={active.cellColors}
-            onCellChange={handleCellChange}
-            onCellSelect={(row, colKey) => setSelected({ row, colKey })}
-            onRowReorder={handleRowReorder}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Paintbrush className="h-4 w-4 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">
+          {selected ? "Färglägg markerad cell:" : "Markera en cell för att färglägga"}
+        </span>
+        {COLOR_SWATCHES.map((c) => (
+          <button
+            key={c.label}
+            type="button"
+            disabled={!selected}
+            title={c.label}
+            onClick={() => applyColor(c.value)}
+            className="h-6 w-6 rounded border border-border disabled:opacity-40"
+            style={{ background: c.value || "transparent" }}
           />
+        ))}
+      </div>
 
-          <NotesGrid notes={active.notes} onNotesCommit={(notes) => patchActive({ notes })} />
-        </div>
-      )}
+      <AirflowGrid
+        rows={draft.rows}
+        importedCells={importedSets}
+        cellColors={draft.cellColors}
+        onCellChange={handleCellChange}
+        onCellSelect={(row, colKey) => setSelected({ row, colKey })}
+        onRowReorder={handleRowReorder}
+      />
+
+      <NotesGrid notes={draft.notes} onNotesCommit={(notes) => patch({ notes })} />
 
       <Dialog open={importOpen} onOpenChange={setImportOpen}>
         <DialogContent>
@@ -308,6 +289,6 @@ export const LfpSection = memo(function LfpSection({ systemDesignation, sheets, 
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </Card>
   );
 });

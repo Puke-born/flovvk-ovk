@@ -391,6 +391,29 @@ export function emptyLfpSheet(name: string, partial?: Partial<LfpSheet>): LfpShe
   };
 }
 
+/** Lägg till ett eller flera LFP-blad på ett aggregat. */
+export async function addLfpSheets(unitId: string, sheets: LfpSheet[]) {
+  const u = await db.units.get(unitId);
+  if (!u) return;
+  await updateUnit(unitId, { lfpSheets: [...(u.lfpSheets ?? []), ...sheets] });
+}
+
+/** Skriv över ett befintligt LFP-blad (läser om aggregatet för att inte skriva över andra blad). */
+export async function saveLfpSheet(unitId: string, sheet: LfpSheet) {
+  const u = await db.units.get(unitId);
+  if (!u) return;
+  const list = u.lfpSheets ?? [];
+  if (!list.some((s) => s.id === sheet.id)) return;
+  await updateUnit(unitId, { lfpSheets: list.map((s) => (s.id === sheet.id ? sheet : s)) });
+}
+
+/** Ta bort ett LFP-blad. */
+export async function deleteLfpSheet(unitId: string, sheetId: string) {
+  const u = await db.units.get(unitId);
+  if (!u) return;
+  await updateUnit(unitId, { lfpSheets: (u.lfpSheets ?? []).filter((s) => s.id !== sheetId) });
+}
+
 /** Auto-namn för LFP-blad kopplat till ett aggregat: "LFP LB01", "LFP LB01 (2)" … */
 export function nextLfpSheetName(systemDesignation: string, existing: LfpSheet[]): string {
   const base = `LFP ${(systemDesignation || "Aggregat").trim()}`.trim();
