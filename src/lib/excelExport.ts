@@ -293,20 +293,12 @@ export async function exportInspectionToExcel(inspectionId: string): Promise<voi
   // Find aggregate template sheet by exact name
   const tplSheet = wb.getWorksheet(TEMPLATE_SHEET_NAME);
 
-  // LFP-mall: flik "LFP" i huvudmallen, annars separat uppladdad LFP-mall
+  // LFP-mall: flik "LFP" i huvudmallen
   const inlineLfpSheet = wb.getWorksheet(LFP_TEMPLATE_SHEET_NAME);
-  let lfpTemplateModel: ExcelJS.WorksheetModel | null = null;
-  if (inlineLfpSheet) {
-    lfpTemplateModel = JSON.parse(JSON.stringify(inlineLfpSheet.model));
-  } else {
-    const lfpTpl = await db.excelTemplate.get("lfpTemplate");
-    if (lfpTpl) {
-      const lwb = new ExcelJS.Workbook();
-      await lwb.xlsx.load(lfpTpl.data);
-      const first = lwb.worksheets[0];
-      if (first) lfpTemplateModel = JSON.parse(JSON.stringify(first.model));
-    }
-  }
+  const lfpTemplateModel: ExcelJS.WorksheetModel | null = inlineLfpSheet
+    ? JSON.parse(JSON.stringify(inlineLfpSheet.model))
+    : null;
+
 
   const lfpDefaults = {
     kund: data.owner.name,

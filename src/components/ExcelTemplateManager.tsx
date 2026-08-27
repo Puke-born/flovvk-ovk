@@ -192,7 +192,7 @@ export function ExcelTemplateManager() {
         </Card>
       )}
 
-      <LfpTemplateCard />
+
 
 
 
@@ -250,82 +250,7 @@ export function ExcelTemplateManager() {
   );
 }
 
-function LfpTemplateCard() {
-  const tpl = useLiveQuery(() => db.excelTemplate.get("lfpTemplate"), []);
-  const ref = useRef<HTMLInputElement>(null);
 
-  const onFile = async (file: File) => {
-    if (!file.name.toLowerCase().endsWith(".xlsx")) {
-      toast.error("Filen måste vara en .xlsx");
-      return;
-    }
-    await db.excelTemplate.put({
-      id: "lfpTemplate",
-      fileName: file.name,
-      uploadedAt: Date.now(),
-      data: await file.arrayBuffer(),
-    });
-    toast.success("LFP-mall uppladdad");
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        LFP-mall (luftflödesprotokoll)
-      </div>
-      <p className="text-sm text-muted-foreground">
-        Ladda upp mallen för luftflödesprotokoll. Vid export skapas en kopia per LFP-blad,
-        placerad direkt efter respektive aggregatflik. (Alternativt: lägg en flik som heter{" "}
-        <strong>LFP</strong> i huvudmallen.)
-      </p>
-      <input
-        ref={ref}
-        type="file"
-        accept=".xlsx"
-        className="hidden"
-        onChange={(e) => {
-          const f = e.target.files?.[0];
-          if (f) onFile(f);
-          e.target.value = "";
-        }}
-      />
-      {tpl ? (
-        <Card className="p-4 flex items-center gap-3">
-          <FileSpreadsheet className="h-7 w-7 text-primary shrink-0" />
-          <div className="flex-1 min-w-0">
-            <div className="font-semibold truncate">{tpl.fileName}</div>
-            <div className="text-xs text-muted-foreground">
-              Uppladdad {new Date(tpl.uploadedAt).toLocaleString("sv-SE")}
-            </div>
-          </div>
-          <Button variant="outline" size="sm" onClick={() => ref.current?.click()}>
-            <Upload className="h-4 w-4 mr-1" />
-            Byt
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-muted-foreground hover:text-destructive"
-            onClick={async () => {
-              await db.excelTemplate.delete("lfpTemplate");
-              toast.success("LFP-mall raderad");
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </Card>
-      ) : (
-        <Card
-          className="p-6 border-dashed text-center cursor-pointer hover:bg-accent/50 transition-colors"
-          onClick={() => ref.current?.click()}
-        >
-          <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-          <p className="font-medium">Ladda upp LFP-mall</p>
-        </Card>
-      )}
-    </div>
-  );
-}
 
 function isKnownPlaceholder(key: string): boolean {
   const all = new Set<string>();
