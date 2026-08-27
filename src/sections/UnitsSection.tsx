@@ -127,7 +127,7 @@ export const UnitEditor = memo(function UnitEditor({
 
   useDebouncedEffect(
     () => {
-      const { id, inspectionId, createdAt, updatedAt, order, ...patch } = form;
+      const { id, inspectionId, createdAt, updatedAt, order, lfpSheets, ...patch } = form;
       updateUnit(unit.id, patch);
     },
     [form],
@@ -141,11 +141,7 @@ export const UnitEditor = memo(function UnitEditor({
     (next: string[][]) => setForm((f) => (f.gridCells === next ? f : { ...f, gridCells: next })),
     [],
   );
-  const [lfpOpen, setLfpOpen] = useState(false);
-  const handleLfpChange = useCallback(
-    (next: LfpSheet[]) => setForm((f) => (f.lfpSheets === next ? f : { ...f, lfpSheets: next })),
-    [],
-  );
+
 
   // Hämta inspektionen för att veta vald besiktningsmans behörighet
   const inspection = useLiveQuery(() => db.inspections.get(unit.inspectionId), [unit.inspectionId]);
