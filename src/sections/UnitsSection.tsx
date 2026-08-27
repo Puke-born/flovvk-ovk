@@ -1,26 +1,22 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
-import { Plus, Trash2, Copy } from "lucide-react";
+import { Trash2, Copy } from "lucide-react";
 import {
   db,
-  addUnit,
   updateUnit,
-  duplicateUnit,
-  deleteUnit,
   STATUS_OPTIONS,
   REPLACEMENT_OPTIONS,
   INSPECTION_INTERVALS,
   normForYear,
   type Unit,
-  type LfpSheet,
 } from "@/lib/db";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { BufferedField } from "@/components/Field";
 import { SelectField, type SelectOption } from "@/components/SelectField";
-import { LfpSection } from "@/sections/LfpSection";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 import { cn } from "@/lib/utils";
+
 
 const VENT_TYPE_LABELS: Record<string, string> = {
   S: "S - Självdrag",
@@ -397,25 +393,8 @@ export const UnitEditor = memo(function UnitEditor({
         </div>
       </Section>
 
-      <div>
-        <button
-          type="button"
-          onClick={() => setLfpOpen((o) => !o)}
-          className="w-full flex items-center justify-between text-sm font-bold uppercase tracking-wide text-primary mb-3 pb-1 border-b border-primary/20"
-        >
-          <span>Luftflödesprotokoll (LFP) {form.lfpSheets?.length ? `(${form.lfpSheets.length})` : ""}</span>
-          <span className="text-xs normal-case font-medium text-muted-foreground">
-            {lfpOpen ? "Dölj" : "Visa"}
-          </span>
-        </button>
-        {lfpOpen && (
-          <LfpSection
-            systemDesignation={form.systemDesignation}
-            sheets={form.lfpSheets ?? []}
-            onChange={handleLfpChange}
-          />
-        )}
-      </div>
+
+
 
       <Section title="Bedömning">
         <SelectField
