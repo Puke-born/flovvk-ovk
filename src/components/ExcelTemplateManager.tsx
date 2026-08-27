@@ -192,7 +192,7 @@ export function ExcelTemplateManager() {
         </Card>
       )}
 
-      <LfpTemplateCard />
+
 
 
 
