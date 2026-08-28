@@ -1,7 +1,7 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, FileSpreadsheet, Plus } from "lucide-react";
+import { ArrowLeft, Save, FileSpreadsheet, Plus, Upload } from "lucide-react";
 import {
   db,
   addUnit,
@@ -10,17 +10,29 @@ import {
   duplicateUnit,
   emptyLfpSheet,
   nextLfpSheetName,
+  type LfpSheet,
 } from "@/lib/db";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { AppShell } from "@/components/AppShell";
 import { InspectionHeaderForm } from "@/sections/InspectionHeaderForm";
 import { UnitEditor } from "@/sections/UnitsSection";
 import { LfpSection } from "@/sections/LfpSection";
 import { IntygView } from "@/sections/IntygView";
 import { exportInspectionToExcel } from "@/lib/excelExport";
+import { getSheetNames, importSheets } from "@/lib/lfpImport";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import AirflowGrid, { type GridRow } from "@/components/AirflowGrid";
 
 export default function InspectionPage() {
   const { id } = useParams<{ id: string }>();
