@@ -81,6 +81,15 @@ export const LfpSection = memo(function LfpSection({
 
   const patch = useCallback((p: Partial<LfpSheet>) => setDraft((d) => ({ ...d, ...p })), []);
 
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
+
   const duplicateSheet = useCallback(async () => {
     const copy: LfpSheet = {
       ...structuredClone(draft),
@@ -264,6 +273,12 @@ export const LfpSection = memo(function LfpSection({
             <Trash2 className="h-4 w-4 mr-2" />
             Radera blad
           </Button>
+          {!fullscreen && (
+            <Button type="button" variant="outline" size="sm" onClick={() => setFullscreen(true)}>
+              <Maximize2 className="h-4 w-4 mr-2" />
+              Helskärm
+            </Button>
+          )}
         </div>
       </div>
 
