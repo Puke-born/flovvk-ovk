@@ -1,5 +1,5 @@
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Upload, Trash2, Copy, Paintbrush } from "lucide-react";
+import { Upload, Trash2, Copy, Paintbrush, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
 import AirflowGrid, { type GridRow } from "@/components/AirflowGrid";
 import NotesGrid from "@/components/NotesGrid";
@@ -61,6 +61,7 @@ export const LfpSection = memo(function LfpSection({
   const [importNames, setImportNames] = useState<string[]>([]);
   const [importPicked, setImportPicked] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
+  const [fullscreen, setFullscreen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingFile = useRef<{ buffer: ArrayBuffer; name: string } | null>(null);
 
@@ -79,6 +80,15 @@ export const LfpSection = memo(function LfpSection({
   );
 
   const patch = useCallback((p: Partial<LfpSheet>) => setDraft((d) => ({ ...d, ...p })), []);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setFullscreen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [fullscreen]);
 
   const duplicateSheet = useCallback(async () => {
     const copy: LfpSheet = {
@@ -180,7 +190,42 @@ export const LfpSection = memo(function LfpSection({
   }, [importPicked, onSelectSheet, sheets, systemDesignation, unitId]);
 
   return (
-    <Card className="p-4 sm:p-6 space-y-3">
+    <Card
+      className={
+        fullscreen
+          ? "fixed inset-0 z-50 rounded-none overflow-auto p-3 space-y-3 bg-background"
+          : "p-4 sm:p-6 space-y-3"
+      }
+    >
+      {fullscreen && (
+        <div className="flex items-center gap-1 overflow-x-auto pb-1 sticky top-0 bg-background z-10">
+          {sheets.map((s) => (
+            <button
+              key={s.id}
+              type="button"
+              onClick={() => onSelectSheet(s.id)}
+              className={
+                "shrink-0 rounded-md border px-3 h-10 text-sm font-medium whitespace-nowrap " +
+                (s.id === sheet.id
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background hover:bg-accent border-border text-foreground")
+              }
+            >
+              {s.name}
+            </button>
+          ))}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="ml-auto shrink-0 h-10"
+            onClick={() => setFullscreen(false)}
+          >
+            <Minimize2 className="h-4 w-4 mr-2" />
+            Avsluta helskärm
+          </Button>
+        </div>
+      )}
       <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
         <div className="col-span-2">
           <Label className="text-xs">Bladnamn</Label>
@@ -228,6 +273,12 @@ export const LfpSection = memo(function LfpSection({
             <Trash2 className="h-4 w-4 mr-2" />
             Radera blad
           </Button>
+          {!fullscreen && (
+            <Button type="button" variant="outline" size="sm" onClick={() => setFullscreen(true)}>
+              <Maximize2 className="h-4 w-4 mr-2" />
+              Helskärm
+            </Button>
+          )}
         </div>
       </div>
 

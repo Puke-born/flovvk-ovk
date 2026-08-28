@@ -198,13 +198,6 @@ export default function InspectionPage() {
         {/* Rad 2: bladflikar för valt aggregat */}
         {activeUnit && (
           <div className="mt-1 flex items-center gap-1 overflow-x-auto pb-1 pl-2 border-l-2 border-primary/30">
-            <button
-              type="button"
-              className={cn(tabClass(!activeSheet), "h-8")}
-              onClick={() => setActiveSheetId(null)}
-            >
-              Protokoll
-            </button>
             {lfpSheets.map((s) => (
               <button
                 key={s.id}
