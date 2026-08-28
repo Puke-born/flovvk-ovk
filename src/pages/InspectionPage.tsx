@@ -1,15 +1,25 @@
 import { useEffect, useState } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, Save, FileSpreadsheet } from "lucide-react";
-import { db } from "@/lib/db";
+import { ArrowLeft, Save, FileSpreadsheet, Plus } from "lucide-react";
+import {
+  db,
+  addUnit,
+  addLfpSheets,
+  deleteUnit,
+  duplicateUnit,
+  emptyLfpSheet,
+  nextLfpSheetName,
+} from "@/lib/db";
 import { Button } from "@/components/ui/button";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Card } from "@/components/ui/card";
 import { AppShell } from "@/components/AppShell";
 import { InspectionHeaderForm } from "@/sections/InspectionHeaderForm";
-import { UnitsSection } from "@/sections/UnitsSection";
+import { UnitEditor } from "@/sections/UnitsSection";
+import { LfpSection } from "@/sections/LfpSection";
 import { IntygView } from "@/sections/IntygView";
 import { exportInspectionToExcel } from "@/lib/excelExport";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 export default function InspectionPage() {
@@ -17,9 +27,32 @@ export default function InspectionPage() {
   const navigate = useNavigate();
   const inspection = useLiveQuery(() => (id ? db.inspections.get(id) : undefined), [id]);
   const template = useLiveQuery(() => db.excelTemplate.get("template"), []);
-  const [tab, setTab] = useState<string>("aggregate");
+  const units = useLiveQuery(
+    () => (id ? db.units.where("inspectionId").equals(id).sortBy("order") : []),
+    [id],
+    [],
+  );
+  const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
+  const [activeSheetId, setActiveSheetId] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  const activeUnit = units?.find((u) => u.id === activeUnitId) ?? null;
+  const lfpSheets = activeUnit?.lfpSheets ?? [];
+  const activeSheet = lfpSheets.find((s) => s.id === activeSheetId) ?? null;
+
+  // Rensa val som inte längre finns
+  useEffect(() => {
+    if (activeUnitId && units && !units.some((u) => u.id === activeUnitId)) {
+      setActiveUnitId(null);
+      setActiveSheetId(null);
+    }
+  }, [units, activeUnitId]);
+  useEffect(() => {
+    if (activeSheetId && activeUnit && !lfpSheets.some((s) => s.id === activeSheetId)) {
+      setActiveSheetId(null);
+    }
+  }, [activeSheetId, activeUnit, lfpSheets]);
 
   const handleExport = async () => {
     if (!id) return;
@@ -33,6 +66,20 @@ export default function InspectionPage() {
     } finally {
       setExporting(false);
     }
+  };
+
+  const handleAddUnit = async () => {
+    if (!id) return;
+    const newId = await addUnit(id);
+    setActiveUnitId(newId);
+    setActiveSheetId(null);
+  };
+
+  const handleAddLfp = async () => {
+    if (!activeUnit) return;
+    const sheet = emptyLfpSheet(nextLfpSheetName(activeUnit.systemDesignation, lfpSheets));
+    await addLfpSheets(activeUnit.id, [sheet]);
+    setActiveSheetId(sheet.id);
   };
 
   useEffect(() => {
@@ -99,27 +146,129 @@ export default function InspectionPage() {
     </div>
   );
 
+  const tabClass = (active: boolean) =>
+    cn(
+      "shrink-0 rounded-md border px-3 h-9 text-sm font-medium transition-colors whitespace-nowrap",
+      active
+        ? "bg-primary text-primary-foreground border-primary"
+        : "bg-background hover:bg-accent border-border text-foreground",
+    );
+
   return (
     <AppShell title={title} right={right}>
       <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <InspectionHeaderForm inspection={inspection} />
 
-        <Tabs value={tab} onValueChange={setTab} className="mt-6">
-          <TabsList className="h-11 w-full sm:w-auto grid grid-cols-2 sm:inline-flex">
-            <TabsTrigger value="intyg" className="text-base h-9">
-              Intyg
-            </TabsTrigger>
-            <TabsTrigger value="aggregate" className="text-base h-9">
-              Aggregat
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="aggregate" className="mt-4">
-            <UnitsSection inspectionId={id} />
-          </TabsContent>
-          <TabsContent value="intyg" className="mt-4">
+        {/* Rad 1: Intyg + aggregat */}
+        <div className="mt-6 flex items-center gap-1 overflow-x-auto pb-1">
+          <button
+            type="button"
+            className={tabClass(!activeUnit)}
+            onClick={() => {
+              setActiveUnitId(null);
+              setActiveSheetId(null);
+            }}
+          >
+            Intyg
+          </button>
+          {units?.map((u, i) => (
+            <button
+              key={u.id}
+              type="button"
+              className={tabClass(activeUnitId === u.id)}
+              onClick={() => {
+                setActiveUnitId(u.id);
+                setActiveSheetId(null);
+              }}
+            >
+              {u.systemDesignation?.trim() || `Aggregat ${i + 1}`}
+            </button>
+          ))}
+          <button
+            type="button"
+            className={cn(tabClass(false), "px-2")}
+            onClick={handleAddUnit}
+            aria-label="Lägg till aggregat"
+            title="Lägg till aggregat"
+          >
+            <Plus className="h-4 w-4" />
+          </button>
+        </div>
+
+        {/* Rad 2: bladflikar för valt aggregat */}
+        {activeUnit && (
+          <div className="mt-1 flex items-center gap-1 overflow-x-auto pb-1 pl-2 border-l-2 border-primary/30">
+            <button
+              type="button"
+              className={cn(tabClass(!activeSheet), "h-8")}
+              onClick={() => setActiveSheetId(null)}
+            >
+              Protokoll
+            </button>
+            {lfpSheets.map((s) => (
+              <button
+                key={s.id}
+                type="button"
+                className={cn(tabClass(activeSheetId === s.id), "h-8")}
+                onClick={() => setActiveSheetId(s.id)}
+              >
+                {s.name}
+              </button>
+            ))}
+            <button
+              type="button"
+              className={cn(tabClass(false), "h-8")}
+              onClick={handleAddLfp}
+            >
+              <Plus className="h-4 w-4 inline mr-1" />
+              LFP
+            </button>
+          </div>
+        )}
+
+        <div className="mt-4">
+          {!activeUnit ? (
             <IntygView inspection={inspection} />
-          </TabsContent>
-        </Tabs>
+          ) : activeSheet ? (
+            <LfpSection
+              key={activeSheet.id}
+              unitId={activeUnit.id}
+              systemDesignation={activeUnit.systemDesignation}
+              sheets={lfpSheets}
+              sheet={activeSheet}
+              onSelectSheet={setActiveSheetId}
+            />
+          ) : (
+            <UnitEditor
+              key={activeUnit.id}
+              unit={activeUnit}
+              onDuplicate={async () => {
+                const newId = await duplicateUnit(activeUnit.id);
+                if (newId) {
+                  setActiveUnitId(newId);
+                  setActiveSheetId(null);
+                  toast.success("Aggregat duplicerat");
+                }
+              }}
+              onDelete={async () => {
+                await deleteUnit(activeUnit.id);
+                setActiveUnitId(null);
+                setActiveSheetId(null);
+                toast.success("Aggregat raderat");
+              }}
+            />
+          )}
+        </div>
+
+        {units && units.length === 0 && (
+          <Card className="mt-4 p-10 text-center border-dashed">
+            <p className="text-muted-foreground mb-4">Inga aggregat ännu.</p>
+            <Button onClick={handleAddUnit} size="lg" className="touch-button">
+              <Plus className="h-5 w-5 mr-2" />
+              Lägg till första aggregatet
+            </Button>
+          </Card>
+        )}
       </div>
     </AppShell>
   );
