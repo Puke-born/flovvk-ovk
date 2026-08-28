@@ -357,6 +357,7 @@ export async function duplicateUnit(unitId: string): Promise<string | null> {
     createdAt: now,
     updatedAt: now,
     systemDesignation: u.systemDesignation + " (kopia)",
+    lfpSheets: [],
   });
   return id;
 }
