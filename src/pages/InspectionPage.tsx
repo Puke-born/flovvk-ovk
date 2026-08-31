@@ -48,6 +48,12 @@ export default function InspectionPage() {
   const [activeSheetId, setActiveSheetId] = useState<string | null>(null);
   const [savedFlash, setSavedFlash] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importNames, setImportNames] = useState<string[]>([]);
+  const [importPicked, setImportPicked] = useState<string[]>([]);
+  const [importing, setImporting] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  const pendingFile = useRef<{ buffer: ArrayBuffer; name: string } | null>(null);
 
   const activeUnit = units?.find((u) => u.id === activeUnitId) ?? null;
   const lfpSheets = activeUnit?.lfpSheets ?? [];
