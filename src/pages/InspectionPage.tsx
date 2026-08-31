@@ -100,6 +100,52 @@ export default function InspectionPage() {
     setActiveSheetId(sheet.id);
   };
 
+  const onPickFile = useCallback(async (file: File) => {
+    try {
+      const buffer = await file.arrayBuffer();
+      pendingFile.current = { buffer, name: file.name };
+      const names = await getSheetNames(buffer.slice(0), file.name);
+      setImportNames(names);
+      setImportPicked(names.slice(0, 1));
+      setImportOpen(true);
+    } catch {
+      toast.error("Kunde inte läsa filen");
+    }
+  }, []);
+
+  const runImport = useCallback(async () => {
+    const file = pendingFile.current;
+    if (!file || importPicked.length === 0 || !activeUnit) return;
+    setImporting(true);
+    try {
+      const imported = await importSheets(file.buffer.slice(0), importPicked, file.name);
+      const created: LfpSheet[] = [];
+      let pool = [...lfpSheets];
+      for (const imp of imported) {
+        const importedCells: Record<string, string[]> = {};
+        imp.rows.forEach((row: GridRow, i: number) => {
+          const keys = Object.keys(row).filter((k) => (row[k] ?? "") !== "");
+          if (keys.length) importedCells[String(i)] = keys;
+        });
+        const s = emptyLfpSheet(nextLfpSheetName(activeUnit.systemDesignation, pool), {
+          rows: imp.rows,
+          notes: imp.notes,
+          importedCells,
+        });
+        pool = [...pool, s];
+        created.push(s);
+      }
+      await addLfpSheets(activeUnit.id, created);
+      if (created[0]) setActiveSheetId(created[0].id);
+      setImportOpen(false);
+      toast.success(`${created.length} blad importerade`);
+    } catch {
+      toast.error("Importen misslyckades");
+    } finally {
+      setImporting(false);
+    }
+  }, [importPicked, activeUnit, lfpSheets]);
+
   useEffect(() => {
     if (!inspection) return;
     setSavedFlash(true);
