@@ -183,21 +183,6 @@ export const LfpSection = memo(function LfpSection({
           />
         </div>
         <div className="col-span-2 flex items-end gap-2 flex-wrap">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".xlsx,.xls"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = "";
-              if (f) void onPickFile(f);
-            }}
-          />
-          <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-            <Upload className="h-4 w-4 mr-2" />
-            Importera
-          </Button>
           <Button type="button" variant="outline" size="sm" onClick={duplicateSheet}>
             <Copy className="h-4 w-4 mr-2" />
             Duplicera
