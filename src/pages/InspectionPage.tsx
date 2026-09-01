@@ -348,6 +348,36 @@ export default function InspectionPage() {
             </Button>
           </Card>
         )}
+
+        <Dialog open={importOpen} onOpenChange={setImportOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Importera luftflödesprotokoll</DialogTitle>
+              <DialogDescription>Välj vilka blad som ska läggas till på aggregatet.</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-72 overflow-auto space-y-2">
+              {importNames.map((n) => (
+                <label key={n} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={importPicked.includes(n)}
+                    onCheckedChange={(v) =>
+                      setImportPicked((prev) => (v ? [...prev, n] : prev.filter((p) => p !== n)))
+                    }
+                  />
+                  {n}
+                </label>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setImportOpen(false)}>
+                Avbryt
+              </Button>
+              <Button onClick={runImport} disabled={importing || importPicked.length === 0}>
+                Importera {importPicked.length > 0 ? `(${importPicked.length})` : ""}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppShell>
   );
