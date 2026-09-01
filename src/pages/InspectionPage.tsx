@@ -257,6 +257,28 @@ export default function InspectionPage() {
           >
             <Plus className="h-4 w-4" />
           </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) void onPickFile(f);
+            }}
+          />
+          <button
+            type="button"
+            className={cn(tabClass(false), "px-2 sm:px-3")}
+            onClick={() => fileRef.current?.click()}
+            disabled={!activeUnit}
+            aria-label="Importera LFP"
+            title={activeUnit ? "Importera LFP" : "Välj ett aggregat först"}
+          >
+            <Upload className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Importera LFP</span>
+          </button>
         </div>
 
         {/* Rad 2: bladflikar för valt aggregat */}
