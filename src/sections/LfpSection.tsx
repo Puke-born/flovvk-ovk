@@ -1,21 +1,12 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Upload, Trash2, Copy, Paintbrush, Maximize2, Minimize2 } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { Trash2, Copy, Paintbrush, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
-import AirflowGrid, { type GridRow } from "@/components/AirflowGrid";
+import AirflowGrid from "@/components/AirflowGrid";
 import NotesGrid from "@/components/NotesGrid";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   addLfpSheets,
   deleteLfpSheet,
@@ -26,7 +17,6 @@ import {
   LFP_ROW_COUNT,
   type LfpSheet,
 } from "@/lib/db";
-import { getSheetNames, importSheets } from "@/lib/lfpImport";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 
 const COLOR_SWATCHES = [
@@ -57,13 +47,7 @@ export const LfpSection = memo(function LfpSection({
 }: Props) {
   const [draft, setDraft] = useState<LfpSheet>(sheet);
   const [selected, setSelected] = useState<{ row: number; colKey: string } | null>(null);
-  const [importOpen, setImportOpen] = useState(false);
-  const [importNames, setImportNames] = useState<string[]>([]);
-  const [importPicked, setImportPicked] = useState<string[]>([]);
-  const [importing, setImporting] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const pendingFile = useRef<{ buffer: ArrayBuffer; name: string } | null>(null);
 
   useEffect(() => {
     setDraft(sheet);
@@ -143,51 +127,6 @@ export const LfpSection = memo(function LfpSection({
     return Array.from({ length: LFP_ROW_COUNT }, (_, i) => new Set(map[String(i)] ?? []));
   }, [draft]);
 
-  const onPickFile = useCallback(async (file: File) => {
-    try {
-      const buffer = await file.arrayBuffer();
-      pendingFile.current = { buffer, name: file.name };
-      const names = await getSheetNames(buffer.slice(0), file.name);
-      setImportNames(names);
-      setImportPicked(names.slice(0, 1));
-      setImportOpen(true);
-    } catch {
-      toast.error("Kunde inte läsa filen");
-    }
-  }, []);
-
-  const runImport = useCallback(async () => {
-    const file = pendingFile.current;
-    if (!file || importPicked.length === 0) return;
-    setImporting(true);
-    try {
-      const imported = await importSheets(file.buffer.slice(0), importPicked, file.name);
-      const created: LfpSheet[] = [];
-      let pool = [...sheets];
-      for (const imp of imported) {
-        const importedCells: Record<string, string[]> = {};
-        imp.rows.forEach((row: GridRow, i: number) => {
-          const keys = Object.keys(row).filter((k) => (row[k] ?? "") !== "");
-          if (keys.length) importedCells[String(i)] = keys;
-        });
-        const s = emptyLfpSheet(nextLfpSheetName(systemDesignation, pool), {
-          rows: imp.rows,
-          notes: imp.notes,
-          importedCells,
-        });
-        pool = [...pool, s];
-        created.push(s);
-      }
-      await addLfpSheets(unitId, created);
-      if (created[0]) onSelectSheet(created[0].id);
-      setImportOpen(false);
-      toast.success(`${created.length} blad importerade`);
-    } catch {
-      toast.error("Importen misslyckades");
-    } finally {
-      setImporting(false);
-    }
-  }, [importPicked, onSelectSheet, sheets, systemDesignation, unitId]);
 
   return (
     <Card
@@ -244,21 +183,6 @@ export const LfpSection = memo(function LfpSection({
           />
         </div>
         <div className="col-span-2 flex items-end gap-2 flex-wrap">
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".xlsx,.xls"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = "";
-              if (f) void onPickFile(f);
-            }}
-          />
-          <Button type="button" variant="outline" size="sm" onClick={() => fileRef.current?.click()}>
-            <Upload className="h-4 w-4 mr-2" />
-            Importera
-          </Button>
           <Button type="button" variant="outline" size="sm" onClick={duplicateSheet}>
             <Copy className="h-4 w-4 mr-2" />
             Duplicera
@@ -310,36 +234,6 @@ export const LfpSection = memo(function LfpSection({
       />
 
       <NotesGrid notes={draft.notes} onNotesCommit={(notes) => patch({ notes })} />
-
-      <Dialog open={importOpen} onOpenChange={setImportOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Importera luftflödesprotokoll</DialogTitle>
-            <DialogDescription>Välj vilka blad som ska läggas till på aggregatet.</DialogDescription>
-          </DialogHeader>
-          <div className="max-h-72 overflow-auto space-y-2">
-            {importNames.map((n) => (
-              <label key={n} className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={importPicked.includes(n)}
-                  onCheckedChange={(v) =>
-                    setImportPicked((prev) => (v ? [...prev, n] : prev.filter((p) => p !== n)))
-                  }
-                />
-                {n}
-              </label>
-            ))}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setImportOpen(false)}>
-              Avbryt
-            </Button>
-            <Button onClick={runImport} disabled={importing || importPicked.length === 0}>
-              Importera {importPicked.length > 0 ? `(${importPicked.length})` : ""}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </Card>
   );
 });

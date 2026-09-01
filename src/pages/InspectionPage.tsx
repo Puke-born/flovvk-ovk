@@ -257,6 +257,28 @@ export default function InspectionPage() {
           >
             <Plus className="h-4 w-4" />
           </button>
+          <input
+            ref={fileRef}
+            type="file"
+            accept=".xlsx,.xls"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              e.target.value = "";
+              if (f) void onPickFile(f);
+            }}
+          />
+          <button
+            type="button"
+            className={cn(tabClass(false), "px-2 sm:px-3")}
+            onClick={() => fileRef.current?.click()}
+            disabled={!activeUnit}
+            aria-label="Importera LFP"
+            title={activeUnit ? "Importera LFP" : "Välj ett aggregat först"}
+          >
+            <Upload className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Importera LFP</span>
+          </button>
         </div>
 
         {/* Rad 2: bladflikar för valt aggregat */}
@@ -326,6 +348,36 @@ export default function InspectionPage() {
             </Button>
           </Card>
         )}
+
+        <Dialog open={importOpen} onOpenChange={setImportOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Importera luftflödesprotokoll</DialogTitle>
+              <DialogDescription>Välj vilka blad som ska läggas till på aggregatet.</DialogDescription>
+            </DialogHeader>
+            <div className="max-h-72 overflow-auto space-y-2">
+              {importNames.map((n) => (
+                <label key={n} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    checked={importPicked.includes(n)}
+                    onCheckedChange={(v) =>
+                      setImportPicked((prev) => (v ? [...prev, n] : prev.filter((p) => p !== n)))
+                    }
+                  />
+                  {n}
+                </label>
+              ))}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setImportOpen(false)}>
+                Avbryt
+              </Button>
+              <Button onClick={runImport} disabled={importing || importPicked.length === 0}>
+                Importera {importPicked.length > 0 ? `(${importPicked.length})` : ""}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </AppShell>
   );
