@@ -90,7 +90,10 @@ export interface Inspection {
   inspectorPostalCode?: string;
   inspectorCity?: string;
   archived?: boolean;
+  /** Importerade LFP-blad som ännu inte kopplats till ett aggregat */
+  unassignedLfp?: LfpSheet[];
 }
+
 
 /** Ett luftflödesprotokoll-blad (samma struktur som LFP-appens `Sheet`). */
 export interface LfpSheet {
