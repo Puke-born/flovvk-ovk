@@ -127,51 +127,6 @@ export const LfpSection = memo(function LfpSection({
     return Array.from({ length: LFP_ROW_COUNT }, (_, i) => new Set(map[String(i)] ?? []));
   }, [draft]);
 
-  const onPickFile = useCallback(async (file: File) => {
-    try {
-      const buffer = await file.arrayBuffer();
-      pendingFile.current = { buffer, name: file.name };
-      const names = await getSheetNames(buffer.slice(0), file.name);
-      setImportNames(names);
-      setImportPicked(names.slice(0, 1));
-      setImportOpen(true);
-    } catch {
-      toast.error("Kunde inte läsa filen");
-    }
-  }, []);
-
-  const runImport = useCallback(async () => {
-    const file = pendingFile.current;
-    if (!file || importPicked.length === 0) return;
-    setImporting(true);
-    try {
-      const imported = await importSheets(file.buffer.slice(0), importPicked, file.name);
-      const created: LfpSheet[] = [];
-      let pool = [...sheets];
-      for (const imp of imported) {
-        const importedCells: Record<string, string[]> = {};
-        imp.rows.forEach((row: GridRow, i: number) => {
-          const keys = Object.keys(row).filter((k) => (row[k] ?? "") !== "");
-          if (keys.length) importedCells[String(i)] = keys;
-        });
-        const s = emptyLfpSheet(nextLfpSheetName(systemDesignation, pool), {
-          rows: imp.rows,
-          notes: imp.notes,
-          importedCells,
-        });
-        pool = [...pool, s];
-        created.push(s);
-      }
-      await addLfpSheets(unitId, created);
-      if (created[0]) onSelectSheet(created[0].id);
-      setImportOpen(false);
-      toast.success(`${created.length} blad importerade`);
-    } catch {
-      toast.error("Importen misslyckades");
-    } finally {
-      setImporting(false);
-    }
-  }, [importPicked, onSelectSheet, sheets, systemDesignation, unitId]);
 
   return (
     <Card
