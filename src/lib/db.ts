@@ -418,6 +418,86 @@ export async function deleteLfpSheet(unitId: string, sheetId: string) {
   await updateUnit(unitId, { lfpSheets: (u.lfpSheets ?? []).filter((s) => s.id !== sheetId) });
 }
 
+/**
+ * Ägare till ett LFP-blad: antingen ett aggregat eller besiktningens
+ * "lösa" rad med importerade blad.
+ */
+export type LfpOwner = { kind: "unit"; id: string } | { kind: "inspection"; id: string };
+
+async function readLfpList(owner: LfpOwner): Promise<LfpSheet[] | null> {
+  if (owner.kind === "unit") {
+    const u = await db.units.get(owner.id);
+    return u ? (u.lfpSheets ?? []) : null;
+  }
+  const i = await db.inspections.get(owner.id);
+  return i ? (i.unassignedLfp ?? []) : null;
+}
+
+async function writeLfpList(owner: LfpOwner, list: LfpSheet[]) {
+  if (owner.kind === "unit") await updateUnit(owner.id, { lfpSheets: list });
+  else await updateInspection(owner.id, { unassignedLfp: list });
+}
+
+/** Lägg till blad hos valfri ägare. */
+export async function addLfpSheetsTo(owner: LfpOwner, sheets: LfpSheet[]) {
+  const list = await readLfpList(owner);
+  if (!list) return;
+  await writeLfpList(owner, [...list, ...sheets]);
+}
+
+/** Spara ett blad hos valfri ägare. */
+export async function saveLfpSheetIn(owner: LfpOwner, sheet: LfpSheet) {
+  const list = await readLfpList(owner);
+  if (!list || !list.some((s) => s.id === sheet.id)) return;
+  await writeLfpList(owner, list.map((s) => (s.id === sheet.id ? sheet : s)));
+}
+
+/** Ta bort ett blad hos valfri ägare. */
+export async function deleteLfpSheetFrom(owner: LfpOwner, sheetId: string) {
+  const list = await readLfpList(owner);
+  if (!list) return;
+  await writeLfpList(owner, list.filter((s) => s.id !== sheetId));
+}
+
+/** Flytta ett LFP-blad mellan ägare och/eller till ny position. */
+export async function moveLfpSheet(
+  from: LfpOwner,
+  to: LfpOwner,
+  sheetId: string,
+  toIndex: number,
+) {
+  const sameOwner = from.kind === to.kind && from.id === to.id;
+  const fromList = await readLfpList(from);
+  if (!fromList) return;
+  const sheet = fromList.find((s) => s.id === sheetId);
+  if (!sheet) return;
+
+  if (sameOwner) {
+    const rest = fromList.filter((s) => s.id !== sheetId);
+    const idx = Math.max(0, Math.min(toIndex, rest.length));
+    rest.splice(idx, 0, sheet);
+    await writeLfpList(from, rest);
+    return;
+  }
+
+  const toList = await readLfpList(to);
+  if (!toList) return;
+  await writeLfpList(from, fromList.filter((s) => s.id !== sheetId));
+  const next = [...toList];
+  const idx = Math.max(0, Math.min(toIndex, next.length));
+  next.splice(idx, 0, sheet);
+  await writeLfpList(to, next);
+}
+
+/** Sätt ny ordning på aggregat. */
+export async function reorderUnits(orderedIds: string[]) {
+  const now = Date.now();
+  await Promise.all(
+    orderedIds.map((uid_, i) => db.units.update(uid_, { order: i, updatedAt: now })),
+  );
+}
+
+
 /** Auto-namn för LFP-blad kopplat till ett aggregat: "LFP LB01", "LFP LB01 (2)" … */
 export function nextLfpSheetName(systemDesignation: string, existing: LfpSheet[]): string {
   const base = `LFP ${(systemDesignation || "Aggregat").trim()}`.trim();
