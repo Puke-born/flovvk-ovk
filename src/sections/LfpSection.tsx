@@ -1,21 +1,12 @@
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Upload, Trash2, Copy, Paintbrush, Maximize2, Minimize2 } from "lucide-react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { Trash2, Copy, Paintbrush, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
-import AirflowGrid, { type GridRow } from "@/components/AirflowGrid";
+import AirflowGrid from "@/components/AirflowGrid";
 import NotesGrid from "@/components/NotesGrid";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   addLfpSheets,
   deleteLfpSheet,
@@ -26,7 +17,6 @@ import {
   LFP_ROW_COUNT,
   type LfpSheet,
 } from "@/lib/db";
-import { getSheetNames, importSheets } from "@/lib/lfpImport";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
 
 const COLOR_SWATCHES = [
