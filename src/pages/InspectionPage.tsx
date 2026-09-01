@@ -1,15 +1,30 @@
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback } from "react";
 import { useLiveQuery } from "dexie-react-hooks";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, Save, FileSpreadsheet, Plus, Upload } from "lucide-react";
 import {
+  DndContext,
+  DragOverlay,
+  PointerSensor,
+  TouchSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+  type DragStartEvent,
+} from "@dnd-kit/core";
+import { SortableContext, arrayMove, horizontalListSortingStrategy } from "@dnd-kit/sortable";
+import {
   db,
   addUnit,
-  addLfpSheets,
+  addLfpSheetsTo,
   deleteUnit,
   duplicateUnit,
   emptyLfpSheet,
+  moveLfpSheet,
   nextLfpSheetName,
+  reorderUnits,
+  type LfpOwner,
   type LfpSheet,
 } from "@/lib/db";
 import { Button } from "@/components/ui/button";
@@ -28,11 +43,22 @@ import { InspectionHeaderForm } from "@/sections/InspectionHeaderForm";
 import { UnitEditor } from "@/sections/UnitsSection";
 import { LfpSection } from "@/sections/LfpSection";
 import { IntygView } from "@/sections/IntygView";
+import { SortableTab, DropRow } from "@/components/SortableTab";
 import { exportInspectionToExcel } from "@/lib/excelExport";
 import { getSheetNames, importSheets } from "@/lib/lfpImport";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
-import AirflowGrid, { type GridRow } from "@/components/AirflowGrid";
+import { type GridRow } from "@/components/AirflowGrid";
+
+const UNASSIGNED = "none";
+const ownerKeyOf = (unitId: string | null) => unitId ?? UNASSIGNED;
+const sheetDragId = (unitId: string | null, sheetId: string) =>
+  `sheet:${ownerKeyOf(unitId)}:${sheetId}`;
+
+type Selection =
+  | { type: "intyg" }
+  | { type: "unit"; unitId: string }
+  | { type: "sheet"; unitId: string | null; sheetId: string };
 
 export default function InspectionPage() {
   const { id } = useParams<{ id: string }>();
@@ -44,33 +70,53 @@ export default function InspectionPage() {
     [id],
     [],
   );
-  const [activeUnitId, setActiveUnitId] = useState<string | null>(null);
-  const [activeSheetId, setActiveSheetId] = useState<string | null>(null);
+  const [sel, setSel] = useState<Selection>({ type: "intyg" });
   const [savedFlash, setSavedFlash] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [importNames, setImportNames] = useState<string[]>([]);
   const [importPicked, setImportPicked] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
+  const [dragLabel, setDragLabel] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingFile = useRef<{ buffer: ArrayBuffer; name: string } | null>(null);
 
+  const unassigned = inspection?.unassignedLfp ?? [];
+  const activeUnitId = sel.type === "intyg" ? null : sel.unitId;
   const activeUnit = units?.find((u) => u.id === activeUnitId) ?? null;
   const lfpSheets = activeUnit?.lfpSheets ?? [];
-  const activeSheet = lfpSheets.find((s) => s.id === activeSheetId) ?? null;
+
+  const activeSheet: LfpSheet | null =
+    sel.type === "sheet"
+      ? (sel.unitId === null ? unassigned : lfpSheets).find((s) => s.id === sel.sheetId) ?? null
+      : null;
+
+  const sheetOwner: LfpOwner | null = useMemo(() => {
+    if (sel.type !== "sheet" || !id) return null;
+    return sel.unitId === null
+      ? { kind: "inspection", id }
+      : { kind: "unit", id: sel.unitId };
+  }, [sel, id]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+  );
 
   // Rensa val som inte längre finns
   useEffect(() => {
-    if (activeUnitId && units && !units.some((u) => u.id === activeUnitId)) {
-      setActiveUnitId(null);
-      setActiveSheetId(null);
+    if (sel.type === "intyg" || !units) return;
+    if (sel.unitId !== null && !units.some((u) => u.id === sel.unitId)) {
+      setSel({ type: "intyg" });
+      return;
     }
-  }, [units, activeUnitId]);
-  useEffect(() => {
-    if (activeSheetId && activeUnit && !lfpSheets.some((s) => s.id === activeSheetId)) {
-      setActiveSheetId(null);
+    if (sel.type === "sheet") {
+      const list = sel.unitId === null ? unassigned : lfpSheets;
+      if (!list.some((s) => s.id === sel.sheetId)) {
+        setSel(sel.unitId ? { type: "unit", unitId: sel.unitId } : { type: "intyg" });
+      }
     }
-  }, [activeSheetId, activeUnit, lfpSheets]);
+  }, [units, sel, unassigned, lfpSheets]);
 
   const handleExport = async () => {
     if (!id) return;
@@ -89,15 +135,14 @@ export default function InspectionPage() {
   const handleAddUnit = async () => {
     if (!id) return;
     const newId = await addUnit(id);
-    setActiveUnitId(newId);
-    setActiveSheetId(null);
+    setSel({ type: "unit", unitId: newId });
   };
 
   const handleAddLfp = async () => {
     if (!activeUnit) return;
     const sheet = emptyLfpSheet(nextLfpSheetName(activeUnit.systemDesignation, lfpSheets));
-    await addLfpSheets(activeUnit.id, [sheet]);
-    setActiveSheetId(sheet.id);
+    await addLfpSheetsTo({ kind: "unit", id: activeUnit.id }, [sheet]);
+    setSel({ type: "sheet", unitId: activeUnit.id, sheetId: sheet.id });
   };
 
   const onPickFile = useCallback(async (file: File) => {
@@ -115,36 +160,105 @@ export default function InspectionPage() {
 
   const runImport = useCallback(async () => {
     const file = pendingFile.current;
-    if (!file || importPicked.length === 0 || !activeUnit) return;
+    if (!file || importPicked.length === 0 || !id) return;
     setImporting(true);
     try {
       const imported = await importSheets(file.buffer.slice(0), importPicked, file.name);
       const created: LfpSheet[] = [];
-      let pool = [...lfpSheets];
+      const taken = new Set(unassigned.map((s) => s.name));
       for (const imp of imported) {
         const importedCells: Record<string, string[]> = {};
         imp.rows.forEach((row: GridRow, i: number) => {
           const keys = Object.keys(row).filter((k) => (row[k] ?? "") !== "");
           if (keys.length) importedCells[String(i)] = keys;
         });
-        const s = emptyLfpSheet(nextLfpSheetName(activeUnit.systemDesignation, pool), {
-          rows: imp.rows,
-          notes: imp.notes,
-          importedCells,
-        });
-        pool = [...pool, s];
-        created.push(s);
+        let name = imp.name?.trim() || "LFP";
+        let n = 2;
+        while (taken.has(name)) name = `${imp.name?.trim() || "LFP"} (${n++})`;
+        taken.add(name);
+        created.push(
+          emptyLfpSheet(name, { rows: imp.rows, notes: imp.notes, importedCells }),
+        );
       }
-      await addLfpSheets(activeUnit.id, created);
-      if (created[0]) setActiveSheetId(created[0].id);
+      await addLfpSheetsTo({ kind: "inspection", id }, created);
+      if (created[0]) setSel({ type: "sheet", unitId: null, sheetId: created[0].id });
       setImportOpen(false);
-      toast.success(`${created.length} blad importerade`);
+      toast.success(`${created.length} blad importerade – dra dem till ett aggregat`);
     } catch {
       toast.error("Importen misslyckades");
     } finally {
       setImporting(false);
     }
-  }, [importPicked, activeUnit, lfpSheets]);
+  }, [importPicked, id, unassigned]);
+
+  const listFor = useCallback(
+    (unitId: string | null): LfpSheet[] =>
+      unitId === null ? unassigned : units?.find((u) => u.id === unitId)?.lfpSheets ?? [],
+    [unassigned, units],
+  );
+
+  const ownerFor = useCallback(
+    (unitId: string | null): LfpOwner =>
+      unitId === null ? { kind: "inspection", id: id! } : { kind: "unit", id: unitId },
+    [id],
+  );
+
+  const onDragStart = (e: DragStartEvent) => {
+    const aid = String(e.active.id);
+    if (aid.startsWith("unit:")) {
+      const u = units?.find((x) => x.id === aid.slice(5));
+      setDragLabel(u?.systemDesignation?.trim() || "Aggregat");
+    } else if (aid.startsWith("sheet:")) {
+      const [, ownerKey, sheetId] = aid.split(":");
+      const s = listFor(ownerKey === UNASSIGNED ? null : ownerKey).find((x) => x.id === sheetId);
+      setDragLabel(s?.name ?? "LFP");
+    }
+  };
+
+  const onDragEnd = async (e: DragEndEvent) => {
+    setDragLabel(null);
+    const { active, over } = e;
+    if (!over || !id) return;
+    const aid = String(active.id);
+    const oid = String(over.id);
+    if (aid === oid) return;
+
+    // Flytta aggregat
+    if (aid.startsWith("unit:")) {
+      if (!oid.startsWith("unit:") || !units) return;
+      const from = units.findIndex((u) => u.id === aid.slice(5));
+      const to = units.findIndex((u) => u.id === oid.slice(5));
+      if (from < 0 || to < 0) return;
+      await reorderUnits(arrayMove(units, from, to).map((u) => u.id));
+      return;
+    }
+
+    // Flytta LFP-blad
+    if (!aid.startsWith("sheet:")) return;
+    const [, fromKey, sheetId] = aid.split(":");
+    const fromUnitId = fromKey === UNASSIGNED ? null : fromKey;
+
+    let toUnitId: string | null;
+    let toIndex: number;
+
+    if (oid.startsWith("sheet:")) {
+      const [, toKey, overSheetId] = oid.split(":");
+      toUnitId = toKey === UNASSIGNED ? null : toKey;
+      toIndex = Math.max(0, listFor(toUnitId).findIndex((s) => s.id === overSheetId));
+    } else if (oid.startsWith("unit:")) {
+      toUnitId = oid.slice(5);
+      toIndex = listFor(toUnitId).length;
+    } else if (oid.startsWith("row:")) {
+      const key = oid.slice(4);
+      toUnitId = key === UNASSIGNED ? null : key;
+      toIndex = listFor(toUnitId).length;
+    } else {
+      return;
+    }
+
+    await moveLfpSheet(ownerFor(fromUnitId), ownerFor(toUnitId), sheetId, toIndex);
+    setSel({ type: "sheet", unitId: toUnitId, sheetId });
+  };
 
   useEffect(() => {
     if (!inspection) return;
@@ -218,125 +332,181 @@ export default function InspectionPage() {
         : "bg-background hover:bg-accent border-border text-foreground",
     );
 
+  const showUnitRow = activeUnitId !== null;
+
   return (
     <AppShell title={title} right={right}>
       <div className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         <InspectionHeaderForm inspection={inspection} />
 
-        {/* Rad 1: Intyg + aggregat */}
-        <div className="mt-6 flex items-center gap-1 overflow-x-auto pb-1">
-          <button
-            type="button"
-            className={tabClass(!activeUnit)}
-            onClick={() => {
-              setActiveUnitId(null);
-              setActiveSheetId(null);
-            }}
-          >
-            Intyg
-          </button>
-          {units?.map((u, i) => (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCenter}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
+          onDragCancel={() => setDragLabel(null)}
+        >
+          {/* Rad 1: Intyg + aggregat */}
+          <div className="mt-6 flex items-center gap-1 overflow-x-auto pb-1">
             <button
-              key={u.id}
               type="button"
-              className={tabClass(activeUnitId === u.id)}
-              onClick={() => {
-                setActiveUnitId(u.id);
-                setActiveSheetId(null);
-              }}
+              className={tabClass(sel.type === "intyg")}
+              onClick={() => setSel({ type: "intyg" })}
             >
-              {u.systemDesignation?.trim() || `Aggregat ${i + 1}`}
+              Intyg
             </button>
-          ))}
-          <button
-            type="button"
-            className={cn(tabClass(false), "px-2")}
-            onClick={handleAddUnit}
-            aria-label="Lägg till aggregat"
-            title="Lägg till aggregat"
-          >
-            <Plus className="h-4 w-4" />
-          </button>
-          <input
-            ref={fileRef}
-            type="file"
-            accept=".xlsx,.xls"
-            className="hidden"
-            onChange={(e) => {
-              const f = e.target.files?.[0];
-              e.target.value = "";
-              if (f) void onPickFile(f);
-            }}
-          />
-          <button
-            type="button"
-            className={cn(tabClass(false), "px-2 sm:px-3")}
-            onClick={() => fileRef.current?.click()}
-            disabled={!activeUnit}
-            aria-label="Importera LFP"
-            title={activeUnit ? "Importera LFP" : "Välj ett aggregat först"}
-          >
-            <Upload className="h-4 w-4 sm:mr-1" />
-            <span className="hidden sm:inline">Importera LFP</span>
-          </button>
-        </div>
-
-        {/* Rad 2: bladflikar för valt aggregat */}
-        {activeUnit && (
-          <div className="mt-1 flex items-center gap-1 overflow-x-auto pb-1 pl-2 border-l-2 border-primary/30">
-            {lfpSheets.map((s) => (
-              <button
-                key={s.id}
-                type="button"
-                className={cn(tabClass(activeSheetId === s.id), "h-8")}
-                onClick={() => setActiveSheetId(s.id)}
-              >
-                {s.name}
-              </button>
-            ))}
+            <SortableContext
+              items={(units ?? []).map((u) => `unit:${u.id}`)}
+              strategy={horizontalListSortingStrategy}
+            >
+              {units?.map((u, i) => (
+                <SortableTab
+                  key={u.id}
+                  id={`unit:${u.id}`}
+                  active={activeUnitId === u.id}
+                  onClick={() => setSel({ type: "unit", unitId: u.id })}
+                >
+                  {u.systemDesignation?.trim() || `Aggregat ${i + 1}`}
+                </SortableTab>
+              ))}
+            </SortableContext>
             <button
               type="button"
-              className={cn(tabClass(false), "h-8")}
-              onClick={handleAddLfp}
+              className={cn(tabClass(false), "px-2")}
+              onClick={handleAddUnit}
+              aria-label="Lägg till aggregat"
+              title="Lägg till aggregat"
             >
-              <Plus className="h-4 w-4 inline mr-1" />
-              LFP
+              <Plus className="h-4 w-4" />
+            </button>
+            <input
+              ref={fileRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                e.target.value = "";
+                if (f) void onPickFile(f);
+              }}
+            />
+            <button
+              type="button"
+              className={cn(tabClass(false), "px-2 sm:px-3")}
+              onClick={() => fileRef.current?.click()}
+              aria-label="Importera LFP"
+              title="Importera LFP"
+            >
+              <Upload className="h-4 w-4 sm:mr-1" />
+              <span className="hidden sm:inline">Importera LFP</span>
             </button>
           </div>
-        )}
+
+          {/* Rad 2: bladflikar för valt aggregat */}
+          {showUnitRow && activeUnit && (
+            <DropRow
+              id={`row:${activeUnit.id}`}
+              className="mt-1 flex items-center gap-1 overflow-x-auto pb-1 pl-2 border-l-2 border-primary/30 min-h-[40px]"
+            >
+              <SortableContext
+                items={lfpSheets.map((s) => sheetDragId(activeUnit.id, s.id))}
+                strategy={horizontalListSortingStrategy}
+              >
+                {lfpSheets.map((s) => (
+                  <SortableTab
+                    key={s.id}
+                    id={sheetDragId(activeUnit.id, s.id)}
+                    className="h-8"
+                    active={sel.type === "sheet" && sel.sheetId === s.id}
+                    onClick={() => setSel({ type: "sheet", unitId: activeUnit.id, sheetId: s.id })}
+                  >
+                    {s.name}
+                  </SortableTab>
+                ))}
+              </SortableContext>
+              <button type="button" className={cn(tabClass(false), "h-8")} onClick={handleAddLfp}>
+                <Plus className="h-4 w-4 inline mr-1" />
+                LFP
+              </button>
+            </DropRow>
+          )}
+
+          {/* Rad 3: lösa (importerade) LFP-blad */}
+          <DropRow
+            id={`row:${UNASSIGNED}`}
+            className="mt-2 flex items-center gap-1 overflow-x-auto pb-1 min-h-[40px]"
+          >
+            <span className="shrink-0 text-xs text-muted-foreground pr-1">Lösa LFP-blad:</span>
+            <SortableContext
+              items={unassigned.map((s) => sheetDragId(null, s.id))}
+              strategy={horizontalListSortingStrategy}
+            >
+              {unassigned.map((s) => (
+                <SortableTab
+                  key={s.id}
+                  id={sheetDragId(null, s.id)}
+                  className="h-8"
+                  active={sel.type === "sheet" && sel.unitId === null && sel.sheetId === s.id}
+                  onClick={() => setSel({ type: "sheet", unitId: null, sheetId: s.id })}
+                >
+                  {s.name}
+                </SortableTab>
+              ))}
+            </SortableContext>
+            {unassigned.length === 0 && (
+              <span className="text-xs text-muted-foreground italic">
+                Importerade blad hamnar här – dra dem till ett aggregat
+              </span>
+            )}
+          </DropRow>
+
+          <DragOverlay>
+            {dragLabel ? (
+              <div className="rounded-md border border-primary bg-primary text-primary-foreground px-3 h-9 flex items-center text-sm font-medium shadow-lg">
+                {dragLabel}
+              </div>
+            ) : null}
+          </DragOverlay>
+        </DndContext>
 
         <div className="mt-4">
-          {!activeUnit ? (
+          {sel.type === "intyg" ? (
             <IntygView inspection={inspection} />
-          ) : activeSheet ? (
+          ) : activeSheet && sheetOwner ? (
             <LfpSection
               key={activeSheet.id}
-              unitId={activeUnit.id}
-              systemDesignation={activeUnit.systemDesignation}
-              sheets={lfpSheets}
+              owner={sheetOwner}
+              systemDesignation={activeUnit?.systemDesignation ?? ""}
+              sheets={sel.type === "sheet" && sel.unitId === null ? unassigned : lfpSheets}
               sheet={activeSheet}
-              onSelectSheet={setActiveSheetId}
+              onSelectSheet={(sheetId) =>
+                setSel(
+                  sheetId
+                    ? { type: "sheet", unitId: activeUnitId, sheetId }
+                    : activeUnitId
+                      ? { type: "unit", unitId: activeUnitId }
+                      : { type: "intyg" },
+                )
+              }
             />
-          ) : (
+          ) : activeUnit ? (
             <UnitEditor
               key={activeUnit.id}
               unit={activeUnit}
               onDuplicate={async () => {
                 const newId = await duplicateUnit(activeUnit.id);
                 if (newId) {
-                  setActiveUnitId(newId);
-                  setActiveSheetId(null);
+                  setSel({ type: "unit", unitId: newId });
                   toast.success("Aggregat duplicerat");
                 }
               }}
               onDelete={async () => {
                 await deleteUnit(activeUnit.id);
-                setActiveUnitId(null);
-                setActiveSheetId(null);
+                setSel({ type: "intyg" });
                 toast.success("Aggregat raderat");
               }}
             />
-          )}
+          ) : null}
         </div>
 
         {units && units.length === 0 && (
@@ -353,7 +523,9 @@ export default function InspectionPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Importera luftflödesprotokoll</DialogTitle>
-              <DialogDescription>Välj vilka blad som ska läggas till på aggregatet.</DialogDescription>
+              <DialogDescription>
+                Valda blad läggs i raden med lösa LFP-blad. Dra dem sedan till rätt aggregat.
+              </DialogDescription>
             </DialogHeader>
             <div className="max-h-72 overflow-auto space-y-2">
               {importNames.map((n) => (

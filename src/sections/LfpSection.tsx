@@ -8,13 +8,14 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
-  addLfpSheets,
-  deleteLfpSheet,
+  addLfpSheetsTo,
+  deleteLfpSheetFrom,
   emptyLfpSheet,
   nextLfpSheetName,
-  saveLfpSheet,
+  saveLfpSheetIn,
   uid,
   LFP_ROW_COUNT,
+  type LfpOwner,
   type LfpSheet,
 } from "@/lib/db";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
@@ -29,7 +30,7 @@ const COLOR_SWATCHES = [
 ];
 
 interface Props {
-  unitId: string;
+  owner: LfpOwner;
   systemDesignation: string;
   /** Alla blad på aggregatet (för namngivning) */
   sheets: LfpSheet[];
@@ -39,7 +40,7 @@ interface Props {
 }
 
 export const LfpSection = memo(function LfpSection({
-  unitId,
+  owner,
   systemDesignation,
   sheets,
   sheet,
@@ -57,7 +58,7 @@ export const LfpSection = memo(function LfpSection({
 
   useDebouncedEffect(
     () => {
-      void saveLfpSheet(unitId, draft);
+      void saveLfpSheetIn(owner, draft);
     },
     [draft],
     500,
@@ -80,14 +81,14 @@ export const LfpSection = memo(function LfpSection({
       id: uid(),
       name: nextLfpSheetName(systemDesignation, sheets),
     };
-    await addLfpSheets(unitId, [copy]);
+    await addLfpSheetsTo(owner, [copy]);
     onSelectSheet(copy.id);
-  }, [draft, onSelectSheet, sheets, systemDesignation, unitId]);
+  }, [draft, onSelectSheet, owner, sheets, systemDesignation]);
 
   const removeSheet = useCallback(async () => {
-    await deleteLfpSheet(unitId, draft.id);
+    await deleteLfpSheetFrom(owner, draft.id);
     onSelectSheet(null);
-  }, [draft.id, onSelectSheet, unitId]);
+  }, [draft.id, onSelectSheet, owner]);
 
   const handleCellChange = useCallback((rowIndex: number, colKey: string, value: string) => {
     setDraft((d) => ({
