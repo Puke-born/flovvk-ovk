@@ -47,13 +47,7 @@ export const LfpSection = memo(function LfpSection({
 }: Props) {
   const [draft, setDraft] = useState<LfpSheet>(sheet);
   const [selected, setSelected] = useState<{ row: number; colKey: string } | null>(null);
-  const [importOpen, setImportOpen] = useState(false);
-  const [importNames, setImportNames] = useState<string[]>([]);
-  const [importPicked, setImportPicked] = useState<string[]>([]);
-  const [importing, setImporting] = useState(false);
   const [fullscreen, setFullscreen] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const pendingFile = useRef<{ buffer: ArrayBuffer; name: string } | null>(null);
 
   useEffect(() => {
     setDraft(sheet);
