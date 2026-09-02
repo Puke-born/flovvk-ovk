@@ -77,11 +77,11 @@ export const LfpSection = memo(function LfpSection({
   useEffect(() => {
     if (!fullscreen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFullscreen(false);
+      if (e.key === "Escape") onFullscreenChange(false);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [fullscreen]);
+  }, [fullscreen, onFullscreenChange]);
 
   const duplicateSheet = useCallback(async () => {
     const copy: LfpSheet = {
