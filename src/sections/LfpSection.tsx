@@ -40,6 +40,8 @@ interface Props {
   /** Alla LFP-blad i besiktningen (visas i helskärm) */
   fullscreenTabs?: { id: string; name: string; unitId: string | null }[];
   onSelectTab?: (unitId: string | null, sheetId: string) => void;
+  fullscreen: boolean;
+  onFullscreenChange: (value: boolean) => void;
 }
 
 export const LfpSection = memo(function LfpSection({
@@ -50,10 +52,11 @@ export const LfpSection = memo(function LfpSection({
   onSelectSheet,
   fullscreenTabs,
   onSelectTab,
+  fullscreen,
+  onFullscreenChange,
 }: Props) {
   const [draft, setDraft] = useState<LfpSheet>(sheet);
   const [selected, setSelected] = useState<{ row: number; colKey: string } | null>(null);
-  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     setDraft(sheet);
@@ -74,11 +77,11 @@ export const LfpSection = memo(function LfpSection({
   useEffect(() => {
     if (!fullscreen) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") setFullscreen(false);
+      if (e.key === "Escape") onFullscreenChange(false);
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [fullscreen]);
+  }, [fullscreen, onFullscreenChange]);
 
   const duplicateSheet = useCallback(async () => {
     const copy: LfpSheet = {
@@ -166,7 +169,7 @@ export const LfpSection = memo(function LfpSection({
             variant="outline"
             size="sm"
             className="ml-auto shrink-0 h-10"
-            onClick={() => setFullscreen(false)}
+            onClick={() => onFullscreenChange(false)}
           >
             <Minimize2 className="h-4 w-4 mr-2" />
             Avsluta helskärm
@@ -206,7 +209,7 @@ export const LfpSection = memo(function LfpSection({
             Radera blad
           </Button>
           {!fullscreen && (
-            <Button type="button" variant="outline" size="sm" onClick={() => setFullscreen(true)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => onFullscreenChange(true)}>
               <Maximize2 className="h-4 w-4 mr-2" />
               Helskärm
             </Button>
