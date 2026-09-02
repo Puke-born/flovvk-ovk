@@ -490,6 +490,8 @@ export default function InspectionPage() {
               systemDesignation={activeUnit?.systemDesignation ?? ""}
               sheets={sel.type === "sheet" && sel.unitId === null ? unassigned : lfpSheets}
               sheet={activeSheet}
+              fullscreenTabs={allLfpTabs}
+              onSelectTab={(unitId, sheetId) => setSel({ type: "sheet", unitId, sheetId })}
               onSelectSheet={(sheetId) =>
                 setSel(
                   sheetId
