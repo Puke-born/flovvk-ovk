@@ -40,6 +40,8 @@ interface Props {
   /** Alla LFP-blad i besiktningen (visas i helskärm) */
   fullscreenTabs?: { id: string; name: string; unitId: string | null }[];
   onSelectTab?: (unitId: string | null, sheetId: string) => void;
+  fullscreen: boolean;
+  onFullscreenChange: (value: boolean) => void;
 }
 
 export const LfpSection = memo(function LfpSection({
