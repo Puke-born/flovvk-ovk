@@ -209,7 +209,7 @@ export const LfpSection = memo(function LfpSection({
             Radera blad
           </Button>
           {!fullscreen && (
-            <Button type="button" variant="outline" size="sm" onClick={() => setFullscreen(true)}>
+            <Button type="button" variant="outline" size="sm" onClick={() => onFullscreenChange(true)}>
               <Maximize2 className="h-4 w-4 mr-2" />
               Helskärm
             </Button>
