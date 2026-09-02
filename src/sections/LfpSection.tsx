@@ -37,6 +37,9 @@ interface Props {
   /** Bladet som visas */
   sheet: LfpSheet;
   onSelectSheet: (sheetId: string | null) => void;
+  /** Alla LFP-blad i besiktningen (visas i helskärm) */
+  fullscreenTabs?: { id: string; name: string; unitId: string | null }[];
+  onSelectTab?: (unitId: string | null, sheetId: string) => void;
 }
 
 export const LfpSection = memo(function LfpSection({
@@ -45,6 +48,8 @@ export const LfpSection = memo(function LfpSection({
   sheets,
   sheet,
   onSelectSheet,
+  fullscreenTabs,
+  onSelectTab,
 }: Props) {
   const [draft, setDraft] = useState<LfpSheet>(sheet);
   const [selected, setSelected] = useState<{ row: number; colKey: string } | null>(null);
@@ -139,11 +144,13 @@ export const LfpSection = memo(function LfpSection({
     >
       {fullscreen && (
         <div className="flex items-center gap-1 overflow-x-auto pb-1 sticky top-0 bg-background z-10">
-          {sheets.map((s) => (
+          {(fullscreenTabs ?? sheets.map((s) => ({ id: s.id, name: s.name, unitId: null }))).map((s) => (
             <button
               key={s.id}
               type="button"
-              onClick={() => onSelectSheet(s.id)}
+              onClick={() =>
+                fullscreenTabs && onSelectTab ? onSelectTab(s.unitId, s.id) : onSelectSheet(s.id)
+              }
               className={
                 "shrink-0 rounded-md border px-3 h-10 text-sm font-medium whitespace-nowrap " +
                 (s.id === sheet.id
