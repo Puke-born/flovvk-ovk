@@ -52,10 +52,11 @@ export const LfpSection = memo(function LfpSection({
   onSelectSheet,
   fullscreenTabs,
   onSelectTab,
+  fullscreen,
+  onFullscreenChange,
 }: Props) {
   const [draft, setDraft] = useState<LfpSheet>(sheet);
   const [selected, setSelected] = useState<{ row: number; colKey: string } | null>(null);
-  const [fullscreen, setFullscreen] = useState(false);
 
   useEffect(() => {
     setDraft(sheet);
