@@ -395,7 +395,32 @@ export async function exportInspectionToExcel(inspectionId: string): Promise<voi
     wb.removeWorksheet(tplSheet.id);
   }
 
+  // Lösa (ej kopplade) LFP-blad sist
+  const looseLfp = (await db.inspections.get(inspectionId))?.unassignedLfp ?? [];
+  if (looseLfp.length > 0) {
+    if (!lfpTemplateModel) {
+      missingLfpTemplate = true;
+    } else {
+      looseLfp.forEach((sheet, j) => {
+        const lfpName = uniqueSheetName(
+          wb,
+          sanitizeSheetName(sheet.name || `LFP ${j + 1}`, `LFP ${j + 1}`),
+        );
+        const lfpWs = wb.addWorksheet(lfpName);
+        const lfpModel = JSON.parse(JSON.stringify(lfpTemplateModel));
+        const lfpId = (lfpWs as any).id;
+        lfpWs.model = { ...lfpModel, id: lfpId, name: lfpName };
+        fillLfpSheet(lfpWs, sheet, `${j + 1}/${looseLfp.length}`, {
+          ...lfpDefaults,
+          system: sheet.system,
+        });
+        orderedNames.push(lfpName);
+      });
+    }
+  }
+
   if (inlineLfpSheet) wb.removeWorksheet(inlineLfpSheet.id);
+
 
   // Sätt flikordning: Intyg → LB01 → LFP LB01 → LB02 → …
   orderedNames.forEach((name, i) => {
