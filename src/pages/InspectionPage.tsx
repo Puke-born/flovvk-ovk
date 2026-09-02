@@ -98,6 +98,17 @@ export default function InspectionPage() {
       : { kind: "unit", id: sel.unitId };
   }, [sel, id]);
 
+  // Alla LFP-blad i besiktningen (för helskärmsraden)
+  const allLfpTabs = useMemo(
+    () => [
+      ...(units ?? []).flatMap((u) =>
+        (u.lfpSheets ?? []).map((s) => ({ id: s.id, name: s.name, unitId: u.id as string | null })),
+      ),
+      ...unassigned.map((s) => ({ id: s.id, name: s.name, unitId: null as string | null })),
+    ],
+    [units, unassigned],
+  );
+
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
@@ -479,6 +490,8 @@ export default function InspectionPage() {
               systemDesignation={activeUnit?.systemDesignation ?? ""}
               sheets={sel.type === "sheet" && sel.unitId === null ? unassigned : lfpSheets}
               sheet={activeSheet}
+              fullscreenTabs={allLfpTabs}
+              onSelectTab={(unitId, sheetId) => setSel({ type: "sheet", unitId, sheetId })}
               onSelectSheet={(sheetId) =>
                 setSel(
                   sheetId
