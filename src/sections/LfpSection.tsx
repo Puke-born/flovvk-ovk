@@ -169,7 +169,7 @@ export const LfpSection = memo(function LfpSection({
             variant="outline"
             size="sm"
             className="ml-auto shrink-0 h-10"
-            onClick={() => setFullscreen(false)}
+            onClick={() => onFullscreenChange(false)}
           >
             <Minimize2 className="h-4 w-4 mr-2" />
             Avsluta helskärm
