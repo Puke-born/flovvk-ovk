@@ -78,6 +78,7 @@ export default function InspectionPage() {
   const [importPicked, setImportPicked] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
   const [dragLabel, setDragLabel] = useState<string | null>(null);
+  const [lfpFullscreen, setLfpFullscreen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingFile = useRef<{ buffer: ArrayBuffer; name: string } | null>(null);
 
