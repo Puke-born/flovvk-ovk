@@ -486,7 +486,6 @@ export default function InspectionPage() {
             <IntygView inspection={inspection} />
           ) : activeSheet && sheetOwner ? (
             <LfpSection
-              key={activeSheet.id}
               owner={sheetOwner}
               systemDesignation={activeUnit?.systemDesignation ?? ""}
               sheets={sel.type === "sheet" && sel.unitId === null ? unassigned : lfpSheets}
@@ -502,6 +501,8 @@ export default function InspectionPage() {
                       : { type: "intyg" },
                 )
               }
+              fullscreen={lfpFullscreen}
+              onFullscreenChange={setLfpFullscreen}
             />
           ) : activeUnit ? (
             <UnitEditor
