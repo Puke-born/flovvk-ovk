@@ -78,6 +78,7 @@ export default function InspectionPage() {
   const [importPicked, setImportPicked] = useState<string[]>([]);
   const [importing, setImporting] = useState(false);
   const [dragLabel, setDragLabel] = useState<string | null>(null);
+  const [lfpFullscreen, setLfpFullscreen] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const pendingFile = useRef<{ buffer: ArrayBuffer; name: string } | null>(null);
 
@@ -485,7 +486,6 @@ export default function InspectionPage() {
             <IntygView inspection={inspection} />
           ) : activeSheet && sheetOwner ? (
             <LfpSection
-              key={activeSheet.id}
               owner={sheetOwner}
               systemDesignation={activeUnit?.systemDesignation ?? ""}
               sheets={sel.type === "sheet" && sel.unitId === null ? unassigned : lfpSheets}
@@ -501,6 +501,8 @@ export default function InspectionPage() {
                       : { type: "intyg" },
                 )
               }
+              fullscreen={lfpFullscreen}
+              onFullscreenChange={setLfpFullscreen}
             />
           ) : activeUnit ? (
             <UnitEditor
