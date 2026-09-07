@@ -256,6 +256,7 @@ export const LfpSection = memo(function LfpSection({
         importedCells={importedSets}
         cellColors={draft.cellColors}
         onCellChange={handleCellChange}
+        onCellInput={handleCellInput}
         onCellSelect={(row, colKey) => setSelected({ row, colKey })}
         onRowReorder={handleRowReorder}
       />
