@@ -105,6 +105,22 @@ export const LfpSection = memo(function LfpSection({
     }));
   }, []);
 
+  // Vid inmatning: ta ENBART bort den tillfälliga gula importmarkeringen.
+  // Egna bakgrundsfärger (cellColors) lämnas orörda.
+  const handleCellInput = useCallback((rowIndex: number, colKey: string) => {
+    setDraft((d) => {
+      const map = d.importedCells ?? {};
+      const rowKey = String(rowIndex);
+      const cells = map[rowKey];
+      if (!cells || !cells.includes(colKey)) return d;
+      const next = { ...map };
+      const rest = cells.filter((c) => c !== colKey);
+      if (rest.length) next[rowKey] = rest;
+      else delete next[rowKey];
+      return { ...d, importedCells: next };
+    });
+  }, []);
+
   const handleRowReorder = useCallback((from: number, to: number) => {
     setDraft((d) => {
       const rows = [...d.rows];
