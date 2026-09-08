@@ -154,7 +154,7 @@ export const UnitEditor = memo(function UnitEditor({
     if (!anyAuth) {
       disabled = true;
       disabledReason = authReason;
-    } else if ((v === "FT" || v === "FTX") && !hasK) {
+    } else if ((v === "T" || v === "FT" || v === "FTX") && !hasK) {
       disabled = true;
       disabledReason = authReason;
     }
