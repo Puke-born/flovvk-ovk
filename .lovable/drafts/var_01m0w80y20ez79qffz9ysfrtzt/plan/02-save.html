@@ -1,0 +1,48 @@
+<svg viewBox="0 0 640 260" xmlns="http://www.w3.org/2000/svg" style="font-family: var(--font-sans)">
+  <style>
+    .lbl { font-size: 14px; font-weight: 480; fill: hsl(var(--foreground)); }
+    .note { font-size: 12px; fill: hsl(var(--muted-foreground)); }
+    .box { fill: none; stroke: hsl(var(--muted-foreground)); stroke-width: 1; }
+    .wire { stroke: hsl(var(--muted-foreground)); stroke-width: 1; fill: none; }
+    .acc { stroke: hsl(var(--accent-foreground)); }
+    .tag { font-size: 12px; fill: hsl(var(--border)); }
+  </style>
+  <defs>
+    <marker id="a" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
+      <path d="M0 0 L8 4 L0 8" fill="none" stroke="hsl(var(--muted-foreground))" stroke-width="1"/>
+    </marker>
+  </defs>
+
+  <text x="0" y="16" class="note">Idag — texten tappas</text>
+  <rect x="0" y="28" width="130" height="44" rx="8" class="box"/>
+  <text x="65" y="55" text-anchor="middle" class="lbl">Du skriver</text>
+  <line x1="130" y1="50" x2="180" y2="50" class="wire" marker-end="url(#a)"/>
+  <rect x="180" y="28" width="150" height="44" rx="8" class="box"/>
+  <text x="255" y="49" text-anchor="middle" class="lbl">Cellen</text>
+  <text x="255" y="64" text-anchor="middle" class="note">sparas vid lämna cell</text>
+  <line x1="330" y1="50" x2="380" y2="50" class="wire" stroke-dasharray="4 3" marker-end="url(#a)"/>
+  <rect x="380" y="28" width="150" height="44" rx="8" class="box"/>
+  <text x="455" y="49" text-anchor="middle" class="lbl">Bladet</text>
+  <text x="455" y="64" text-anchor="middle" class="note">sparas efter 0,5 s</text>
+  <text x="545" y="55" class="note">byte av blad</text>
+  <text x="545" y="70" class="note">→ borta</text>
+
+  <line x1="0" y1="100" x2="640" y2="100" class="wire" stroke="hsl(var(--border))"/>
+
+  <text x="0" y="130" class="note">Efter ändringen</text>
+  <rect x="0" y="142" width="130" height="44" rx="8" class="box"/>
+  <text x="65" y="169" text-anchor="middle" class="lbl">Du skriver</text>
+  <line x1="130" y1="164" x2="180" y2="164" class="wire" marker-end="url(#a)"/>
+  <rect x="180" y="142" width="150" height="44" rx="8" class="box acc"/>
+  <text x="255" y="163" text-anchor="middle" class="lbl">Cellen</text>
+  <text x="255" y="178" text-anchor="middle" class="note">skrivs in vid bladbyte</text>
+  <line x1="330" y1="164" x2="380" y2="164" class="wire" marker-end="url(#a)"/>
+  <rect x="380" y="142" width="150" height="44" rx="8" class="box acc"/>
+  <text x="455" y="163" text-anchor="middle" class="lbl">Bladet</text>
+  <text x="455" y="178" text-anchor="middle" class="note">sparas direkt</text>
+  <circle cx="574" cy="164" r="10" fill="hsl(var(--accent))"/>
+  <text x="574" y="168" text-anchor="middle" class="note" fill="hsl(var(--accent-foreground))">1</text>
+  <text x="592" y="168" class="note">inget tappas</text>
+
+  <text x="0" y="228" class="note">1 — samma kedja gäller anteckningsrutorna under rutnätet.</text>
+</svg>
