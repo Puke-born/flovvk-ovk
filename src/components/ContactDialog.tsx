@@ -15,10 +15,11 @@ interface ContactDialogProps {
   onOpenChange: (o: boolean) => void;
   initial?: Partial<Contact>;
   title: string;
+  prefillNote?: string;
   onSave: (c: Omit<Contact, "id">) => void;
 }
 
-export function ContactDialog({ open, onOpenChange, initial, title, onSave }: ContactDialogProps) {
+export function ContactDialog({ open, onOpenChange, initial, title, prefillNote, onSave }: ContactDialogProps) {
   const [form, setForm] = React.useState<Omit<Contact, "id">>({
     name: "",
     contactPerson: "",
