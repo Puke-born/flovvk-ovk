@@ -11,6 +11,7 @@ interface Props {
 
 export function SignaturePad({ value, onChange, label = "Signatur" }: Props) {
   const canvasRef = React.useRef<HTMLCanvasElement>(null);
+  const fileRef = React.useRef<HTMLInputElement>(null);
   const drawing = React.useRef(false);
   const last = React.useRef<{ x: number; y: number } | null>(null);
   const [hasInk, setHasInk] = React.useState(!!value);
