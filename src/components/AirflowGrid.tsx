@@ -81,6 +81,18 @@ const GridCell = memo(function GridCell({
     if (next !== value) onCommit(rowIdx, colKey, next);
   }, [colKey, value, onCommit, rowIdx]);
 
+  // Spara även om cellen avmonteras medan markören står kvar i den
+  const commitRef = useRef(commit);
+  commitRef.current = commit;
+  const localRef = useRef(local);
+  localRef.current = local;
+  useEffect(
+    () => () => {
+      if (focusedRef.current) commitRef.current(localRef.current);
+    },
+    [],
+  );
+
   return (
     <input
       data-row={rowIdx}
