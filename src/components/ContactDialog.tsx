@@ -52,6 +52,9 @@ export function ContactDialog({ open, onOpenChange, initial, title, prefillNote,
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
         </DialogHeader>
+        {prefillNote && (
+          <p className="text-xs text-muted-foreground -mt-2">{prefillNote}</p>
+        )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <Field label="Namn / Företag" value={form.name} onChange={(e) => set("name", e.target.value)} containerClassName="sm:col-span-2" />
           <Field label="Kontaktperson" value={form.contactPerson ?? ""} onChange={(e) => set("contactPerson", e.target.value)} containerClassName="sm:col-span-2" />
