@@ -21,11 +21,12 @@ import { cn } from "@/lib/utils";
 const VENT_TYPE_LABELS: Record<string, string> = {
   S: "S - Självdrag",
   F: "F - Mekanisk frånluft",
+  T: "T - Mekanisk tilluft",
   FT: "FT - Mekanisk från- och tilluft",
   FX: "FX - Mekanisk frånluft med återvinning",
   FTX: "FTX - Mekanisk från- och tilluft med återvinning",
 };
-const VENT_TYPE_ORDER = ["S", "F", "FT", "FX", "FTX"] as const;
+const VENT_TYPE_ORDER = ["S", "F", "T", "FT", "FX", "FTX"] as const;
 
 const INSPECTION_TYPE_OPTIONS: SelectOption[] = [
   { value: "FB", label: "FB - Första besiktning" },

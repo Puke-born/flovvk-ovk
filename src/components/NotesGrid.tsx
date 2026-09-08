@@ -99,6 +99,18 @@ const NotesGrid = memo(({ notes, onNotesCommit, onCellSelect }: NotesGridProps) 
     });
   }, [commitIfChanged]);
 
+  // Spara även om rutnätet avmonteras medan markören står kvar i en ruta
+  const gridRef2 = useRef(localGrid);
+  gridRef2.current = localGrid;
+  const commitRef = useRef(commitIfChanged);
+  commitRef.current = commitIfChanged;
+  useEffect(
+    () => () => {
+      commitRef.current(gridRef2.current);
+    },
+    [],
+  );
+
   return (
     <>
       <style>{`
