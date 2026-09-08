@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trash2, Copy, Paintbrush, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
 import AirflowGrid from "@/components/AirflowGrid";
