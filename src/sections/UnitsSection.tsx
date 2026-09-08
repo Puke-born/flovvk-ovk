@@ -81,7 +81,7 @@ function parseAuthorizations(auth?: string) {
 
 function intervalForVentType(vt?: string, care?: boolean): "3 år" | "6 år" | "" {
   if (care) return "3 år";
-  if (vt === "FT" || vt === "FTX") return "3 år";
+  if (vt === "T" || vt === "FT" || vt === "FTX") return "3 år";
   if (vt === "S" || vt === "F" || vt === "FX") return "6 år";
   return "";
 }

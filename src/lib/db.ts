@@ -23,7 +23,7 @@ export const REPLACEMENT_OPTIONS = [
 ] as const;
 export type ReplacementInterval = (typeof REPLACEMENT_OPTIONS)[number] | "";
 
-export const VENT_TYPES = ["F", "FT", "FTX", "S", "FX"] as const;
+export const VENT_TYPES = ["F", "T", "FT", "FTX", "S", "FX"] as const;
 export const INSPECTION_TYPES = ["FB", "ÅB", "OB"] as const;
 export const INSPECTION_INTERVALS = ["3 år", "6 år"] as const;
 
