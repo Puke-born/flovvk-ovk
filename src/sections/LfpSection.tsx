@@ -72,6 +72,19 @@ export const LfpSection = memo(function LfpSection({
     500,
   );
 
+  // Spara direkt när man byter blad eller lämnar vyn – vänta inte ut fördröjningen
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  useEffect(() => {
+    const currentOwner = owner;
+    const currentId = sheet.id;
+    return () => {
+      const d = draftRef.current;
+      if (d && d.id === currentId) void saveLfpSheetIn(currentOwner, d);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheet.id]);
+
   const patch = useCallback((p: Partial<LfpSheet>) => setDraft((d) => ({ ...d, ...p })), []);
 
   useEffect(() => {
