@@ -71,6 +71,11 @@ export default function InspectionPage() {
     [],
   );
   const [sel, setSel] = useState<Selection>({ type: "intyg" });
+  // Se till att en påbörjad cellinmatning skrivs in innan vi byter blad
+  const selectTab = useCallback((s: Selection) => {
+    (document.activeElement as HTMLElement | null)?.blur?.();
+    setSel(s);
+  }, []);
   const [savedFlash, setSavedFlash] = useState(false);
   const [exporting, setExporting] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
