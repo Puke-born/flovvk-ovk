@@ -368,7 +368,7 @@ export default function InspectionPage() {
             <button
               type="button"
               className={tabClass(sel.type === "intyg")}
-              onClick={() => setSel({ type: "intyg" })}
+              onClick={() => selectTab({ type: "intyg" })}
             >
               Intyg
             </button>
@@ -381,7 +381,7 @@ export default function InspectionPage() {
                   key={u.id}
                   id={`unit:${u.id}`}
                   active={activeUnitId === u.id}
-                  onClick={() => setSel({ type: "unit", unitId: u.id })}
+                  onClick={() => selectTab({ type: "unit", unitId: u.id })}
                 >
                   {u.systemDesignation?.trim() || `Aggregat ${i + 1}`}
                 </SortableTab>
@@ -435,7 +435,7 @@ export default function InspectionPage() {
                     id={sheetDragId(activeUnit.id, s.id)}
                     className="h-8"
                     active={sel.type === "sheet" && sel.sheetId === s.id}
-                    onClick={() => setSel({ type: "sheet", unitId: activeUnit.id, sheetId: s.id })}
+                    onClick={() => selectTab({ type: "sheet", unitId: activeUnit.id, sheetId: s.id })}
                   >
                     {s.name}
                   </SortableTab>
@@ -464,7 +464,7 @@ export default function InspectionPage() {
                   id={sheetDragId(null, s.id)}
                   className="h-8"
                   active={sel.type === "sheet" && sel.unitId === null && sel.sheetId === s.id}
-                  onClick={() => setSel({ type: "sheet", unitId: null, sheetId: s.id })}
+                  onClick={() => selectTab({ type: "sheet", unitId: null, sheetId: s.id })}
                 >
                   {s.name}
                 </SortableTab>
@@ -496,7 +496,7 @@ export default function InspectionPage() {
               sheets={sel.type === "sheet" && sel.unitId === null ? unassigned : lfpSheets}
               sheet={activeSheet}
               fullscreenTabs={allLfpTabs}
-              onSelectTab={(unitId, sheetId) => setSel({ type: "sheet", unitId, sheetId })}
+              onSelectTab={(unitId, sheetId) => selectTab({ type: "sheet", unitId, sheetId })}
               onSelectSheet={(sheetId) =>
                 setSel(
                   sheetId
