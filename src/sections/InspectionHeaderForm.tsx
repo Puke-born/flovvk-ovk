@@ -239,6 +239,20 @@ export function InspectionHeaderForm({ inspection }: Props) {
       <ContactDialog
         open={opsDialog}
         onOpenChange={setOpsDialog}
+        initial={
+          selectedOwner
+            ? {
+                name: selectedOwner.name,
+                contactPerson: selectedOwner.contactPerson,
+                address: selectedOwner.address,
+                postalCode: selectedOwner.postalCode,
+                city: selectedOwner.city,
+                phone: selectedOwner.phone,
+                email: selectedOwner.email,
+              }
+            : undefined
+        }
+        prefillNote={selectedOwner ? "Förifyllt från fastighetsägaren – ändra vid behov." : undefined}
         title="Ny driftansvarig"
         onSave={async (data) => {
           const id = uid();

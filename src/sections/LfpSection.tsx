@@ -1,4 +1,4 @@
-import { memo, useCallback, useEffect, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Trash2, Copy, Paintbrush, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
 import AirflowGrid from "@/components/AirflowGrid";
@@ -71,6 +71,19 @@ export const LfpSection = memo(function LfpSection({
     [draft],
     500,
   );
+
+  // Spara direkt när man byter blad eller lämnar vyn – vänta inte ut fördröjningen
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
+  useEffect(() => {
+    const currentOwner = owner;
+    const currentId = sheet.id;
+    return () => {
+      const d = draftRef.current;
+      if (d && d.id === currentId) void saveLfpSheetIn(currentOwner, d);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sheet.id]);
 
   const patch = useCallback((p: Partial<LfpSheet>) => setDraft((d) => ({ ...d, ...p })), []);
 

@@ -21,11 +21,12 @@ import { cn } from "@/lib/utils";
 const VENT_TYPE_LABELS: Record<string, string> = {
   S: "S - Självdrag",
   F: "F - Mekanisk frånluft",
+  T: "T - Mekanisk tilluft",
   FT: "FT - Mekanisk från- och tilluft",
   FX: "FX - Mekanisk frånluft med återvinning",
   FTX: "FTX - Mekanisk från- och tilluft med återvinning",
 };
-const VENT_TYPE_ORDER = ["S", "F", "FT", "FX", "FTX"] as const;
+const VENT_TYPE_ORDER = ["S", "F", "T", "FT", "FX", "FTX"] as const;
 
 const INSPECTION_TYPE_OPTIONS: SelectOption[] = [
   { value: "FB", label: "FB - Första besiktning" },
@@ -80,7 +81,7 @@ function parseAuthorizations(auth?: string) {
 
 function intervalForVentType(vt?: string, care?: boolean): "3 år" | "6 år" | "" {
   if (care) return "3 år";
-  if (vt === "FT" || vt === "FTX") return "3 år";
+  if (vt === "T" || vt === "FT" || vt === "FTX") return "3 år";
   if (vt === "S" || vt === "F" || vt === "FX") return "6 år";
   return "";
 }
@@ -153,7 +154,7 @@ export const UnitEditor = memo(function UnitEditor({
     if (!anyAuth) {
       disabled = true;
       disabledReason = authReason;
-    } else if ((v === "FT" || v === "FTX") && !hasK) {
+    } else if ((v === "T" || v === "FT" || v === "FTX") && !hasK) {
       disabled = true;
       disabledReason = authReason;
     }
