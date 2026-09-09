@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ContactDialog } from "@/components/ContactDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InspectorDialog } from "@/components/InspectorDialog";
 import { BuildingNormDialog } from "@/components/BuildingNormDialog";
 import { BuildingNormBulkDialog } from "@/components/BuildingNormBulkDialog";
@@ -15,26 +16,65 @@ import { toast } from "sonner";
 
 function ContactList({ table }: { table: "propertyOwners" | "operationsManagers" }) {
   const items = useLiveQuery(() => db[table].toArray(), [], []);
+  const isOps = table === "operationsManagers";
+  const owners = useLiveQuery(() => (isOps ? db.propertyOwners.toArray() : Promise.resolve([])), [isOps], []);
   const [open, setOpen] = useState(false);
+  const [pickOpen, setPickOpen] = useState(false);
   const [editing, setEditing] = useState<Contact | undefined>();
+  const [prefill, setPrefill] = useState<Partial<Contact> | undefined>();
 
   return (
     <div className="space-y-3">
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center gap-2">
         <p className="text-sm text-muted-foreground">
           {items?.length ?? 0} {items?.length === 1 ? "post" : "poster"}
         </p>
-        <Button
-          onClick={() => {
-            setEditing(undefined);
-            setOpen(true);
-          }}
-          className="touch-button"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Lägg till
-        </Button>
+        <div className="flex gap-2">
+          {isOps && (owners?.length ?? 0) > 0 && (
+            <Button variant="outline" onClick={() => setPickOpen(true)} className="touch-button">
+              Från fastighetsägare
+            </Button>
+          )}
+          <Button
+            onClick={() => {
+              setEditing(undefined);
+              setPrefill(undefined);
+              setOpen(true);
+            }}
+            className="touch-button"
+          >
+            <Plus className="h-4 w-4 mr-2" />
+            Lägg till
+          </Button>
+        </div>
       </div>
+      {isOps && (
+        <Dialog open={pickOpen} onOpenChange={setPickOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Välj fastighetsägare</DialogTitle>
+            </DialogHeader>
+            <div className="max-h-[50vh] overflow-y-auto grid gap-2">
+              {owners?.map((o) => (
+                <Button
+                  key={o.id}
+                  variant="outline"
+                  className="justify-start h-auto py-3"
+                  onClick={() => {
+                    const { id: _id, ...rest } = o;
+                    setEditing(undefined);
+                    setPrefill(rest);
+                    setPickOpen(false);
+                    setOpen(true);
+                  }}
+                >
+                  <span className="truncate">{o.name}</span>
+                </Button>
+              ))}
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
       <div className="grid gap-2">
         {items?.map((c) => (
           <Card key={c.id} className="p-3 flex items-center gap-3">
@@ -75,8 +115,9 @@ function ContactList({ table }: { table: "propertyOwners" | "operationsManagers"
       <ContactDialog
         open={open}
         onOpenChange={setOpen}
-        initial={editing}
+        initial={editing ?? prefill}
         title={editing ? "Redigera" : "Ny post"}
+        prefillNote={!editing && prefill ? "Förifyllt från fastighetsägaren – ändra vid behov." : undefined}
         onSave={async (data) => {
           if (editing) {
             await db[table].update(editing.id, data);
