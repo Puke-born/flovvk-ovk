@@ -115,8 +115,9 @@ function ContactList({ table }: { table: "propertyOwners" | "operationsManagers"
       <ContactDialog
         open={open}
         onOpenChange={setOpen}
-        initial={editing}
+        initial={editing ?? prefill}
         title={editing ? "Redigera" : "Ny post"}
+        prefillNote={!editing && prefill ? "Förifyllt från fastighetsägaren – ändra vid behov." : undefined}
         onSave={async (data) => {
           if (editing) {
             await db[table].update(editing.id, data);
