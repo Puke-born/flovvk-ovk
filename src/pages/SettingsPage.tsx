@@ -6,6 +6,7 @@ import { AppShell } from "@/components/AppShell";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { ContactDialog } from "@/components/ContactDialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { InspectorDialog } from "@/components/InspectorDialog";
 import { BuildingNormDialog } from "@/components/BuildingNormDialog";
 import { BuildingNormBulkDialog } from "@/components/BuildingNormBulkDialog";
