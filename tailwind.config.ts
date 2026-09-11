@@ -53,15 +53,6 @@ export default {
           DEFAULT: "hsl(var(--card))",
           foreground: "hsl(var(--card-foreground))",
         },
-        "grid-border": "hsl(var(--grid-border))",
-        "grid-header": {
-          DEFAULT: "hsl(var(--grid-header))",
-          foreground: "hsl(var(--grid-header-foreground))",
-        },
-        "grid-cell": {
-          DEFAULT: "hsl(var(--grid-cell))",
-          alt: "hsl(var(--grid-cell-alt))",
-        },
         sidebar: {
           DEFAULT: "hsl(var(--sidebar-background))",
           foreground: "hsl(var(--sidebar-foreground))",

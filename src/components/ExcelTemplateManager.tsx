@@ -192,10 +192,6 @@ export function ExcelTemplateManager() {
         </Card>
       )}
 
-
-
-
-
       <Collapsible>
         <CollapsibleTrigger className="flex items-center gap-2 text-sm font-semibold w-full justify-between p-2 rounded hover:bg-accent/50 transition-colors group">
           <span>Tillgängliga platshållare</span>
@@ -249,8 +245,6 @@ export function ExcelTemplateManager() {
     </div>
   );
 }
-
-
 
 function isKnownPlaceholder(key: string): boolean {
   const all = new Set<string>();

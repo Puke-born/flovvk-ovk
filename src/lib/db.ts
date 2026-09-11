@@ -23,7 +23,7 @@ export const REPLACEMENT_OPTIONS = [
 ] as const;
 export type ReplacementInterval = (typeof REPLACEMENT_OPTIONS)[number] | "";
 
-export const VENT_TYPES = ["F", "T", "FT", "FTX", "S", "FX"] as const;
+export const VENT_TYPES = ["F", "FT", "FTX", "S", "FX"] as const;
 export const INSPECTION_TYPES = ["FB", "ÅB", "OB"] as const;
 export const INSPECTION_INTERVALS = ["3 år", "6 år"] as const;
 
@@ -90,43 +90,7 @@ export interface Inspection {
   inspectorPostalCode?: string;
   inspectorCity?: string;
   archived?: boolean;
-  /** Importerade LFP-blad som ännu inte kopplats till ett aggregat */
-  unassignedLfp?: LfpSheet[];
 }
-
-
-/** Ett luftflödesprotokoll-blad (samma struktur som LFP-appens `Sheet`). */
-export interface LfpSheet {
-  id: string;
-  name: string;
-  kund?: string;
-  anlaggning?: string;
-  utfordAv?: string;
-  arbNr?: string;
-  datum?: string;
-  system?: string;
-  plan?: string;
-  rows: Record<string, string>[]; // 36 rader
-  notes: string;
-  /** rowIndex -> colKey -> hex färg */
-  cellColors?: Record<string, Record<string, string>>;
-  /** rowIndex -> lista med colKeys som importerats (Set kan inte lagras i IndexedDB) */
-  importedCells?: Record<string, string[]>;
-}
-
-export const LFP_ROW_COUNT = 36;
-export const LFP_COL_KEYS = [
-  "rum_nr",
-  "rum_namn",
-  "tilluft_dontyp",
-  "tilluft_inst",
-  "tilluft_beraknat",
-  "tilluft_uppmat",
-  "franluft_dontyp",
-  "franluft_inst",
-  "franluft_beraknat",
-  "franluft_uppmat",
-] as const;
 
 export interface Unit {
   id: string;
@@ -165,8 +129,6 @@ export interface Unit {
   notes?: string;
   // Free-form grid for remarks: 30 rows × 13 cols, sparse. Exports to H21:T50.
   gridCells?: string[][];
-  /** Kopplade luftflödesprotokoll */
-  lfpSheets?: LfpSheet[];
 }
 
 export interface ExcelTemplate {
@@ -251,23 +213,6 @@ class OvkDB extends Dexie {
         });
         await tx.table("inspections").toCollection().modify((i: Record<string, unknown>) => {
           delete i.buildingNorm;
-        });
-      });
-    // v6: luftflödesprotokoll (LFP) per aggregat
-    this.version(6)
-      .stores({
-        inspections: "id, createdAt, updatedAt, propertyDesignation, archived",
-        units: "id, inspectionId, order, updatedAt",
-        propertyOwners: "id, name",
-        operationsManagers: "id, name",
-        inspector: "id",
-        inspectors: "id, name",
-        buildingNorms: "id, year",
-        excelTemplate: "id",
-      })
-      .upgrade(async (tx) => {
-        await tx.table("units").toCollection().modify((u: Unit) => {
-          if (!u.lfpSheets) u.lfpSheets = [];
         });
       });
   }
@@ -360,7 +305,6 @@ export async function duplicateUnit(unitId: string): Promise<string | null> {
     createdAt: now,
     updatedAt: now,
     systemDesignation: u.systemDesignation + " (kopia)",
-    lfpSheets: [],
   });
   return id;
 }
@@ -380,132 +324,6 @@ export async function updateInspection(id: string, patch: Partial<Inspection>) {
 
 export async function updateUnit(id: string, patch: Partial<Unit>) {
   await db.units.update(id, { ...patch, updatedAt: Date.now() });
-}
-
-/** Nytt tomt LFP-blad. */
-export function emptyLfpSheet(name: string, partial?: Partial<LfpSheet>): LfpSheet {
-  return {
-    id: uid(),
-    name,
-    rows: Array.from({ length: LFP_ROW_COUNT }, () => ({})),
-    notes: "",
-    cellColors: {},
-    importedCells: {},
-    ...partial,
-  };
-}
-
-/** Lägg till ett eller flera LFP-blad på ett aggregat. */
-export async function addLfpSheets(unitId: string, sheets: LfpSheet[]) {
-  const u = await db.units.get(unitId);
-  if (!u) return;
-  await updateUnit(unitId, { lfpSheets: [...(u.lfpSheets ?? []), ...sheets] });
-}
-
-/** Skriv över ett befintligt LFP-blad (läser om aggregatet för att inte skriva över andra blad). */
-export async function saveLfpSheet(unitId: string, sheet: LfpSheet) {
-  const u = await db.units.get(unitId);
-  if (!u) return;
-  const list = u.lfpSheets ?? [];
-  if (!list.some((s) => s.id === sheet.id)) return;
-  await updateUnit(unitId, { lfpSheets: list.map((s) => (s.id === sheet.id ? sheet : s)) });
-}
-
-/** Ta bort ett LFP-blad. */
-export async function deleteLfpSheet(unitId: string, sheetId: string) {
-  const u = await db.units.get(unitId);
-  if (!u) return;
-  await updateUnit(unitId, { lfpSheets: (u.lfpSheets ?? []).filter((s) => s.id !== sheetId) });
-}
-
-/**
- * Ägare till ett LFP-blad: antingen ett aggregat eller besiktningens
- * "lösa" rad med importerade blad.
- */
-export type LfpOwner = { kind: "unit"; id: string } | { kind: "inspection"; id: string };
-
-async function readLfpList(owner: LfpOwner): Promise<LfpSheet[] | null> {
-  if (owner.kind === "unit") {
-    const u = await db.units.get(owner.id);
-    return u ? (u.lfpSheets ?? []) : null;
-  }
-  const i = await db.inspections.get(owner.id);
-  return i ? (i.unassignedLfp ?? []) : null;
-}
-
-async function writeLfpList(owner: LfpOwner, list: LfpSheet[]) {
-  if (owner.kind === "unit") await updateUnit(owner.id, { lfpSheets: list });
-  else await updateInspection(owner.id, { unassignedLfp: list });
-}
-
-/** Lägg till blad hos valfri ägare. */
-export async function addLfpSheetsTo(owner: LfpOwner, sheets: LfpSheet[]) {
-  const list = await readLfpList(owner);
-  if (!list) return;
-  await writeLfpList(owner, [...list, ...sheets]);
-}
-
-/** Spara ett blad hos valfri ägare. */
-export async function saveLfpSheetIn(owner: LfpOwner, sheet: LfpSheet) {
-  const list = await readLfpList(owner);
-  if (!list || !list.some((s) => s.id === sheet.id)) return;
-  await writeLfpList(owner, list.map((s) => (s.id === sheet.id ? sheet : s)));
-}
-
-/** Ta bort ett blad hos valfri ägare. */
-export async function deleteLfpSheetFrom(owner: LfpOwner, sheetId: string) {
-  const list = await readLfpList(owner);
-  if (!list) return;
-  await writeLfpList(owner, list.filter((s) => s.id !== sheetId));
-}
-
-/** Flytta ett LFP-blad mellan ägare och/eller till ny position. */
-export async function moveLfpSheet(
-  from: LfpOwner,
-  to: LfpOwner,
-  sheetId: string,
-  toIndex: number,
-) {
-  const sameOwner = from.kind === to.kind && from.id === to.id;
-  const fromList = await readLfpList(from);
-  if (!fromList) return;
-  const sheet = fromList.find((s) => s.id === sheetId);
-  if (!sheet) return;
-
-  if (sameOwner) {
-    const rest = fromList.filter((s) => s.id !== sheetId);
-    const idx = Math.max(0, Math.min(toIndex, rest.length));
-    rest.splice(idx, 0, sheet);
-    await writeLfpList(from, rest);
-    return;
-  }
-
-  const toList = await readLfpList(to);
-  if (!toList) return;
-  await writeLfpList(from, fromList.filter((s) => s.id !== sheetId));
-  const next = [...toList];
-  const idx = Math.max(0, Math.min(toIndex, next.length));
-  next.splice(idx, 0, sheet);
-  await writeLfpList(to, next);
-}
-
-/** Sätt ny ordning på aggregat. */
-export async function reorderUnits(orderedIds: string[]) {
-  const now = Date.now();
-  await Promise.all(
-    orderedIds.map((uid_, i) => db.units.update(uid_, { order: i, updatedAt: now })),
-  );
-}
-
-
-/** Auto-namn för LFP-blad kopplat till ett aggregat: "LFP LB01", "LFP LB01 (2)" … */
-export function nextLfpSheetName(systemDesignation: string, existing: LfpSheet[]): string {
-  const base = `LFP ${(systemDesignation || "Aggregat").trim()}`.trim();
-  const taken = new Set(existing.map((s) => s.name));
-  if (!taken.has(base)) return base;
-  let i = 2;
-  while (taken.has(`${base} (${i})`)) i++;
-  return `${base} (${i})`;
 }
 
 /** Senaste byggnorm vars år är <= angivet år. */
