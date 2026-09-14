@@ -56,7 +56,7 @@ describe("calculateNextInspectionDate", () => {
         previousDate: "2011-03-10",
         intervalYears: 3,
       }),
-    ).toBe("2027-03-10");
+    ).toBe("2029-03-10");
   });
 
   it("skottdag hanteras", () => {

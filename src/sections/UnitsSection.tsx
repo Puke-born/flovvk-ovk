@@ -87,12 +87,6 @@ function intervalForVentType(vt?: string, care?: boolean): "3 år" | "6 år" | "
   return "";
 }
 
-function addYears(dateStr: string, years: number): string {
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return "";
-  d.setFullYear(d.getFullYear() + years);
-  return d.toISOString().slice(0, 10);
-}
 import {
   AlertDialog,
   AlertDialogAction,
