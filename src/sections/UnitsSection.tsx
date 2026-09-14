@@ -18,7 +18,7 @@ import { Button } from "@/components/ui/button";
 import { BufferedField } from "@/components/Field";
 import { SelectField, type SelectOption } from "@/components/SelectField";
 import { useDebouncedEffect } from "@/hooks/useDebouncedEffect";
-import { cn } from "@/lib/utils";
+import { cn, calculateNextInspectionDate } from "@/lib/utils";
 
 const VENT_TYPE_LABELS: Record<string, string> = {
   S: "S - Självdrag",
@@ -87,12 +87,6 @@ function intervalForVentType(vt?: string, care?: boolean): "3 år" | "6 år" | "
   return "";
 }
 
-function addYears(dateStr: string, years: number): string {
-  const d = new Date(dateStr);
-  if (Number.isNaN(d.getTime())) return "";
-  d.setFullYear(d.getFullYear() + years);
-  return d.toISOString().slice(0, 10);
-}
 import {
   AlertDialog,
   AlertDialogAction,
@@ -280,13 +274,18 @@ const UnitEditor = memo(function UnitEditor({
     });
   }, [form.ventilationType, careFacility]);
 
-  // Auto-sätt nästa ord. besiktning utifrån besiktningsdatum + intervall.
+  // Auto-sätt nästa ord. besiktning enligt BFS 2011:16 (behåll cykeln vid försening).
   const lastAutoNext = useRef<string>(unit.nextOrdinaryDate ?? "");
   useEffect(() => {
     if (!form.inspectionDate || !form.inspectionInterval) return;
     const years = form.inspectionInterval === "3 år" ? 3 : form.inspectionInterval === "6 år" ? 6 : 0;
     if (!years) return;
-    const target = addYears(form.inspectionDate, years);
+    const target = calculateNextInspectionDate({
+      inspectionDate: form.inspectionDate,
+      previousDate: form.previousInspectionDate,
+      intervalYears: years,
+      isFirstInspection: form.inspectionType === "FB",
+    });
     if (!target) return;
     setForm((f) => {
       if (!f.nextOrdinaryDate || f.nextOrdinaryDate === lastAutoNext.current) {
@@ -295,7 +294,7 @@ const UnitEditor = memo(function UnitEditor({
       }
       return f;
     });
-  }, [form.inspectionDate, form.inspectionInterval]);
+  }, [form.inspectionDate, form.inspectionInterval, form.previousInspectionDate, form.inspectionType]);
 
   // Byggnorm per aggregat: ombyggnadsår om ifyllt, annars fastighetens byggår.
   const norms = useLiveQuery(() => db.buildingNorms.toArray(), [], []);
